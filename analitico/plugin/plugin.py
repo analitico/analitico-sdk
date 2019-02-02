@@ -1,0 +1,195 @@
+import logging
+import pandas
+import tempfile
+import os.path
+import shutil
+
+from abc import ABC, abstractmethod
+
+# Design patterns:
+# https://github.com/faif/python-patterns
+
+from analitico.mixin import AttributesMixin
+
+##
+## IPluginManager
+##
+
+
+class IPluginManager(ABC, AttributesMixin):
+    """ A base abstract class for a plugin lifecycle manager and runtime environment """
+
+    # Temporary directory used during plugin execution
+    _temporary_directory = None
+
+    @abstractmethod
+    def create_plugin(self, name: str, **kwargs):
+        """ A factory method that creates a plugin from its name and settings (builder pattern) """
+        pass
+
+    def get_temporary_directory(self):
+        """ Temporary directory that can be used while a plugin runs and is deleted afterwards """
+        if self._temporary_directory is None:
+            self._temporary_directory = tempfile.mkdtemp()
+        return self._temporary_directory
+
+    def get_artifacts_directory(self):
+        """ 
+        An plugin can produce various file artifacts during execution and place
+        them in this directory (datasets, statistics, models, etc). If the execution 
+        is completed succesfully, a subclass of IPluginManager may persist this 
+        information to storage, etc. A file, eg: data.csv, can have a "sister" file
+        data.csv.info that contains json metadata (eg: a model may have a sister
+        file containing the model's training time, stats, etc).
+        """
+        artifacts = os.path.join(self.get_temporary_directory(), "artifacts")
+        if not os.path.isdir(artifacts):
+            os.mkdir(artifacts)
+        return artifacts
+
+    def __enter__(self):
+        # setup
+        return self
+
+    def __exit__(self, type, value, traceback):
+        """ Delete any temporary files upon exiting """
+        if self._temporary_directory:
+            shutil.rmtree(self._temporary_directory, ignore_errors=True)
+
+
+##
+## IPlugin - base class for all plugins
+##
+
+
+class IPlugin(ABC, AttributesMixin):
+    """ Abstract base class for Analitico plugins """
+
+    class Meta:
+        """ Plugin metadata is exposed in its inner class """
+
+        name = None
+
+    # Manager that owns this plugin
+    manager = None
+
+    @property
+    def name(self):
+        assert self.Meta.name
+        return self.Meta.name
+
+    @property
+    def logger(self):
+        """ Logger that can be used by the plugin to communicate errors, etc with host """
+        return logging.getLogger(self.name)
+
+    def __init__(self, manager: IPluginManager, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.manager = manager
+
+    def activate(self, *args, **kwargs):
+        """ Called when the plugin is initially activated """
+        pass
+
+    @abstractmethod
+    def process(self, *args, **kwargs):
+        """ Run will do in the subclass whatever the plugin does """
+        pass
+
+    def deactivate(self, *args, **kwargs):
+        """ Called before the plugin is deactivated and finalized """
+        pass
+
+    def __str__(self):
+        return self.name
+
+
+##
+## IDataframeSourcePlugin - base class for plugins that create dataframes
+##
+
+
+class IDataframeSourcePlugin(IPlugin):
+    """ A plugin that creates a pandas dataframe from a source (eg: csv file, sql query, etc) """
+
+    class Meta(IPlugin.Meta):
+        inputs = None
+        outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+
+    @abstractmethod
+    def process(self, *args, **kwargs):
+        """ Run creates a dataset from the source and returns it """
+        pass
+
+
+##
+## IDataframePlugin - base class for plugins that manipulate pandas dataframes
+##
+
+
+class IDataframePlugin(IPlugin):
+    """
+    A plugin that takes a pandas dataframe as input,
+    manipulates it and returns a pandas dataframe
+    """
+
+    class Meta(IPlugin.Meta):
+        inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+        outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+
+    def process(self, *args, **kwargs) -> pandas.DataFrame:
+        assert isinstance(args[0], pandas.DataFrame)
+        return args[0]
+
+
+##
+## IGroupPlugin
+##
+
+
+class IGroupPlugin(IPlugin):
+    """ 
+    A composite plugin that joins multiple plugins into a functional block,
+    for example a processing pipeline made of plugins or a graph workflow. 
+    
+    *References:
+    https://en.wikipedia.org/wiki/Composite_pattern
+    https://infinitescript.com/2014/10/the-23-gang-of-three-design-patterns/
+    """
+
+    plugins = []
+
+    def __init__(self, manager: IPluginManager, plugins, *args, **kwargs):
+        """ Initialize group and create all this plugin's children """
+        super().__init__(manager=manager, *args, **kwargs)
+        self.plugins = []
+        for plugin in plugins:
+            if isinstance(plugin, dict):
+                plugin = self.manager.create_plugin(**plugin)
+            self.plugins.append(plugin)
+
+
+##
+## PluginError
+##
+
+
+class PluginError(Exception):
+    """ Exception generated by a plugin; carries plugin info, inner exception """
+
+    # Plugin error message
+    message: str = None
+
+    # Plugin that generated this error (may not be defined)
+    plugin: IPlugin = None
+
+    def __init__(self, message, plugin: IPlugin = None, exception: Exception = None):
+        super().__init__(message, exception)
+        self.message = message
+        self.plugin = plugin
+        plugin.logger.error(message)
+
+    def __str__(self):
+        if self.plugin:
+            return self.plugin.name + ": " + self.message
+        return self.message
