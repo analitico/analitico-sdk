@@ -1,9 +1,9 @@
 
-# Analitico SDK
+## Analitico SDK
 
-This library contains plugins and classes used to access analitico.ai cloud services and machine learning models.  
+This package contains plugins and classes used to access analitico.ai cloud services and machine learning models. The package can be installed in Jupyter notebooks, Colaboratory notebooks or other Python environments. To access assets stored in Analitico you will need an API token.
 
-The library can be easily installed in Jupyter notebooks or other Python environments.
+## Installation
 
 To install in Python:  
 `pip install analitico`
@@ -11,32 +11,18 @@ To install in Python:
 To install on Jupyter, Colaboratory, etc:  
 `!pip install analitico`
 
-Usage example:  
+## Usage
+
 ```python
 import analitico
 import pandas as pd
 
+# authorize calls with developer token
 api = analitico.authorize("tok_xxx")
+
+# download a dataset from analitico
 dataset = api.get_dataset("ds_xxx")
+
+# convert dataset to a typed pandas dataframe
 df = dataset.get_dataframe()
 ```
-
-## Packaging analitico
-
-Python packaging user guide:  
-https://packaging.python.org/
-
-Prerequisites:  
-`python3 -m pip install --user --upgrade setuptools wheel`
-
-Compile packages:  
-`python3 setup.py sdist bdist_wheel`
-
-Publish to test.pypi.org:  
-`python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*`
-
-Publish to pypi.org:  
-`python3 -m twine upload dist/*`
-
-Package is visible at:  
-`https://pypi.org/project/analitico/`
