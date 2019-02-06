@@ -13,7 +13,7 @@ pip install wheel
 Compile packages:  
 ```console
 rm -r dist
-python3 source/setup.py sdist bdist_wheel
+python3 setup.py sdist bdist_wheel
 ```
 
 Publish to test.pypi.org:  
