@@ -1,7 +1,8 @@
-# Possible frameworks/utilities
-# https://github.com/pytest-dev/pluggy/
-# http://yapsy.sourceforge.net/
+### Analitico Package
 
+The library contains code that can be used in Jupyter to complement the analitico.ai online service. For example, the IT manager in your organization could setup an extraction, transformation and loading pipeline (ETL) in analitico and you could then have the data scientist access the resulting data in Jupyter to build his models.  
+
+The architecture is built around plugins. A plugin could, for example, fetch data from source like a CSV file, a SQL database or an Hadoop dataset. A plugin can be used to create a regression model or a neural network for image classification. A plugin can be used to serve inferences from a trained model using a serve on premis, a Kubernetes cluster or a serverless endpoint.
 
 General concepts:
 - plugins can contain code that we write
