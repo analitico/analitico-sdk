@@ -15,6 +15,9 @@ ASSETS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/assets"
 class TestMixin:
     """ Basic unit testing functionality for analitico's tests """
 
+    # Create default factory
+    manager = analitico.authorize()
+
     def get_asset_path(self, path):
         """ Returns absolute path of file in test /assets directory """
         return os.path.join(ASSETS_PATH, path)
@@ -27,7 +30,7 @@ class TestMixin:
 
     def read_dataset_asset(self, path):
         json = self.read_json_asset(path)
-        return Dataset(**json)
+        return Dataset(manager=self.manager, **json)
 
     def read_dataframe_asset(self, path):
         ds = self.read_dataset_asset(path)
@@ -35,4 +38,4 @@ class TestMixin:
 
     def get_csv_plugin(self, **kwargs):
         name = analitico.plugin.CSV_DATAFRAME_SOURCE_PLUGIN
-        return analitico.plugin.manager.create_plugin(name, **kwargs)
+        return self.manager.create_plugin(name, **kwargs)

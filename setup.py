@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="analitico",
-    version="0.0.0.dev3",
+    version="0.0.0.dev4",
     author="Analitico Labs Inc.",
     author_email="info@analitico.ai",
     description="A Python package for Analitico.ai",
@@ -14,7 +14,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/analitico/analitico-sdk",
     packages=setuptools.find_packages(),
-    package_data={"analitico": ["test/assets/*.*"]},
+    package_data={
+        "analitico": ["test/assets/*.*"]
+        },
     install_requires=[
         "catboost>=0.12.2", 
         "numpy>=1.14.6", 

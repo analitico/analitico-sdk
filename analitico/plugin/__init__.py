@@ -7,22 +7,21 @@ from .plugin import IPluginManager  # NOQA: F401
 from .plugin import PluginError  # NOQA: F401
 
 # plugins to generate dataframes from sources
-from .sources import CsvDataframeSourcePlugin
+from .csvdataframesourceplugin import CsvDataframeSourcePlugin
 
 # plugins to tranform dataframes
 from .transforms import CodeDataframePlugin
 
 # plugin workflows
-from .groups import PipelinePlugin
-from .groups import GraphPlugin
-
-# plugin factory
-from .manager import PluginManager, manager  # NOQA: F401
+from .pipelineplugin import PipelinePlugin
+from .dataframepipelineplugin import DataframePipelinePlugin
+from .graphplugin import GraphPlugin
 
 # plugin names
 CSV_DATAFRAME_SOURCE_PLUGIN = CsvDataframeSourcePlugin.Meta.name
 CODE_DATAFRAME_PLUGIN = CodeDataframePlugin.Meta.name
 PIPELINE_PLUGIN = PipelinePlugin.Meta.name
+DATAFRAME_PIPELINE_PLUGIN = DataframePipelinePlugin.Meta.name
 GRAPH_PLUGIN = GraphPlugin.Meta.name
 
 # analitico type for plugins

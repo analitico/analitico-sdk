@@ -2,8 +2,9 @@
 Plugins that import dataframes from different sources
 """
 
+import requests
 import pandas
-from analitico.utilities import analitico_to_pandas_type
+from analitico.utilities import analitico_to_pandas_type, get_dict_dot
 from .plugin import IDataframeSourcePlugin, PluginError
 
 ##
@@ -17,10 +18,23 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
     class Meta(IDataframeSourcePlugin.Meta):
         name = "analitico.plugin.CsvDataframeSourcePlugin"
 
-    def process(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         """ Creates a pandas dataframe from the csv source """
         try:
+            url = self.get_attribute("source.url")
+            if not url:
+                raise PluginError("URL of csv file cannot be empty.", plugin=self)
+
+            # source schema is part of the source definition?
             schema = self.get_attribute("source.schema")
+
+            # no schema was provided but the url is that of an analitico dataset in the cloud
+            if not schema and url.startswith("analitico://") and url.endswith("/data/csv"):
+                info_url = url.replace("/data/csv", "/data/info")
+                info = self.manager.get_url_json(info_url)
+                schema = get_dict_dot(info, "data.schema")
+
+            # array of types for each column in the source
             columns = schema.get("columns") if schema else None
 
             dtype = None
@@ -47,7 +61,8 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
             url = self.get_attribute("source.url")
             if not url:
                 raise PluginError("URL of csv file cannot be empty.", plugin=self)
-            df = pandas.read_csv(url, dtype=dtype, parse_dates=parse_dates)
+            stream = self.manager.get_url_stream(url)
+            df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates)
 
             if index:
                 # transform specific column with unique values to dataframe index

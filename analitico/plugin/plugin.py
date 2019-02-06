@@ -3,24 +3,50 @@ import pandas
 import tempfile
 import os.path
 import shutil
+import urllib.request
+import re
+import requests
+import json
+import tempfile
 
+import urllib.parse
+from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 
 # Design patterns:
 # https://github.com/faif/python-patterns
 
-from analitico.mixin import AttributesMixin
+from analitico.mixin import AttributeMixin
 
 ##
 ## IPluginManager
 ##
 
 
-class IPluginManager(ABC, AttributesMixin):
+class IPluginManager(ABC, AttributeMixin):
     """ A base abstract class for a plugin lifecycle manager and runtime environment """
+
+    # Authorization token to be used when calling analitico APIs
+    token = None
+
+    # APIs endpoint, eg: https://analitico.ai/api/
+    endpoint = None
 
     # Temporary directory used during plugin execution
     _temporary_directory = None
+
+    def __init__(self, token=None, endpoint=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if token:
+            assert token.startswith("tok_")
+            self.token = token
+        if endpoint:
+            assert endpoint.startswith("http")
+            self.endpoint = endpoint
+
+    ##
+    ## Plugins
+    ##
 
     @abstractmethod
     def create_plugin(self, name: str, **kwargs):
@@ -47,6 +73,78 @@ class IPluginManager(ABC, AttributesMixin):
             os.mkdir(artifacts)
         return artifacts
 
+    def get_cache_directory(self):
+        """ Returns directory to be used for caches """
+        # method is separate from temp in case we later decide to share local caches
+        return self.get_temporary_directory()
+
+    ##
+    ## URL retrieval, authorization and caching
+    ##
+
+    # regular expression used to detect assets using analitico:// scheme
+    ANALITICO_ASSET_RE = r"(analitico://workspaces/(?P<workspace_id>[-\w.]{4,256})/)"
+
+    def get_url(self, url) -> str:
+        """
+        If the url uses the analitico:// scheme for assets stored on the cloud
+        service, it will convert the url to a regular https:// scheme.
+        If the url points to an analitico API call, the request will have the
+        ?token= authorization token header added to it.
+        """
+        # temporarily while all internal urls are updated to analitico://
+        if url.startswith("workspaces/ws_"):
+            url = ANALITICO_PREFIX + url
+
+        # see if assets uses analitico://workspaces/... scheme
+        if url.startswith("analitico://"):
+            if not self.endpoint:
+                raise PluginError(
+                    "Plugin manager was not been configured with an API endpoint therefore it cannot process: " + url
+                )
+            url = self.endpoint + url[len("analitico://") :]
+        return url
+
+    def get_url_stream(self, url):
+        """
+        Returns a stream to the given url. This works for regular http:// or https://
+        and also works for analitico:// assets which are converted to calls to the given
+        endpoint with proper authorization tokens. The stream is returned as an iterator.
+        """
+        url = self.get_url(url)
+        try:
+            url_parse = urlparse(url)
+        except Exception as exc:
+            pass
+        if url_parse and url_parse.scheme in ("http", "https"):
+            headers = {}
+            if url_parse.hostname and url_parse.hostname.endswith("analitico.ai") and self.token:
+                # if url is connecting to analitico.ai add token
+                headers = {"Authorization": "Bearer " + self.token}
+            response = requests.get(url, stream=True, headers=headers)
+            return response.raw
+        return open(url, "rb")
+
+    def get_url_json(self, url):
+        url_stream = self.get_url_stream(url)
+        with tempfile.NamedTemporaryFile() as tf:
+            for b in url_stream:
+                tf.write(b)
+            tf.seek(0)
+            return json.load(tf)
+
+    ##
+    ## Factory methods
+    ##
+
+    @abstractmethod
+    def get_dataset(self, dataset_id):
+        return None
+
+    ##
+    ## with IPluginManager as lifecycle methods
+    ##
+
     def __enter__(self):
         # setup
         return self
@@ -62,7 +160,7 @@ class IPluginManager(ABC, AttributesMixin):
 ##
 
 
-class IPlugin(ABC, AttributesMixin):
+class IPlugin(ABC, AttributeMixin):
     """ Abstract base class for Analitico plugins """
 
     class Meta:
@@ -70,8 +168,8 @@ class IPlugin(ABC, AttributesMixin):
 
         name = None
 
-    # Manager that owns this plugin
-    manager = None
+    # Manager that provides environment and lifecycle services
+    manager: IPluginManager = None
 
     @property
     def name(self):
@@ -92,7 +190,7 @@ class IPlugin(ABC, AttributesMixin):
         pass
 
     @abstractmethod
-    def process(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         """ Run will do in the subclass whatever the plugin does """
         pass
 
@@ -117,7 +215,7 @@ class IDataframeSourcePlugin(IPlugin):
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
     @abstractmethod
-    def process(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         """ Run creates a dataset from the source and returns it """
         pass
 
@@ -137,7 +235,27 @@ class IDataframePlugin(IPlugin):
         inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
-    def process(self, *args, **kwargs) -> pandas.DataFrame:
+    def run(self, *args, **kwargs) -> pandas.DataFrame:
+        assert isinstance(args[0], pandas.DataFrame)
+        return args[0]
+
+
+##
+## IRecipePlugin - base class for machine learning recipes that can produce trained models
+##
+
+
+class IRecipePlugin(IPlugin):
+    """
+    A plugin that takes a pandas dataframe as input including labels
+    and train a model or a pandas dataframe and run predictions based on a trained model
+    """
+
+    class Meta(IPlugin.Meta):
+        inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+        outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+
+    def run(self, *args, **kwargs) -> pandas.DataFrame:
         assert isinstance(args[0], pandas.DataFrame)
         return args[0]
 
@@ -186,8 +304,9 @@ class PluginError(Exception):
     def __init__(self, message, plugin: IPlugin = None, exception: Exception = None):
         super().__init__(message, exception)
         self.message = message
-        self.plugin = plugin
-        plugin.logger.error(message)
+        if plugin:
+            self.plugin = plugin
+            plugin.logger.error(message)
 
     def __str__(self):
         if self.plugin:
