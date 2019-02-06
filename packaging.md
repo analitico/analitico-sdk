@@ -7,12 +7,13 @@ Prerequisites:
 ```console
 python3 -m pip install --user --upgrade setuptools wheel
 pip install twine
+pip install wheel
 ```
 
 Compile packages:  
 ```console
 rm -r dist
-python3 source/setup.py sdist
+python3 source/setup.py sdist bdist_wheel
 ```
 
 Publish to test.pypi.org:  
