@@ -241,23 +241,36 @@ class IDataframePlugin(IPlugin):
 
 
 ##
-## IRecipePlugin - base class for machine learning recipes that can produce trained models
+## IAlgorithmPlugin - base class for machine learning algorithms that produce trained models
 ##
 
 
-class IRecipePlugin(IPlugin):
-    """
-    A plugin that takes a pandas dataframe as input including labels
-    and train a model or a pandas dataframe and run predictions based on a trained model
-    """
+class IAlgorithmPlugin(IPlugin):
+    """ An algorithm used to create machine learning models from training data """
 
     class Meta(IPlugin.Meta):
-        inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
-        outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+        inputs = [
+            {"name": "training", "type": "pandas.DataFrame"},
+            {"name": "validation", "type": "pandas.DataFrame|none"},
+        ]
+        outputs = [{"name": "model", "type": "dict"}]
 
     def run(self, *args, **kwargs) -> pandas.DataFrame:
+        """ 
+        When an algorithm runs it always takes in a dataframe with training data,
+        it may optionally have a dataframe of validation data and will return a dictionary
+        with information on the trained model plus a number of artifacts.
+        """
         assert isinstance(args[0], pandas.DataFrame)
-        return args[0]
+        training = args[0]
+        validation = args[1] if len(args) > 1 and isinstance(args[1], pandas.DataFrame) else None
+        model = self.train(training, validation, *args, **kwargs)
+        return model
+
+    @abstractmethod
+    def train(self, training, validation, *args, **kwargs):
+        """ Train with algorithm and given data to produce a trained model """
+        return None
 
 
 ##
