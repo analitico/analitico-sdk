@@ -25,11 +25,13 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 class CatBoostPlugin(IAlgorithmPlugin):
     """ Base class for CatBoost regressor and classifier plugins """
 
+    results = None
+
     class Meta(IAlgorithmPlugin.Meta):
         name = "analitico.plugin.CatBoostPlugin"
 
     @abstractmethod
-    def create_model(self):
+    def create_model(self, results):
         """ Creates actual CatBoostClassifier or CatBoostRegressor model in subclass """
         pass
 
@@ -42,11 +44,11 @@ class CatBoostPlugin(IAlgorithmPlugin):
         results: dict,
     ):
         """ Scores the results of this training """
-        params = results["data"]["parameters"] = {}
         for key, value in model.get_params().items():
-            params[key] = value
-        params["best_iteration"] = model.get_best_iteration()
-        params["best_score"] = model.get_best_score()
+            results["parameters"][key] = value
+
+        results["scores"]["best_iteration"] = model.get_best_iteration()
+        results["scores"]["best_score"] = model.get_best_score()
 
         # catboost can tell which features weigh more heavily on the predictions
         self.info("features importance:")
@@ -69,6 +71,33 @@ class CatBoostPlugin(IAlgorithmPlugin):
         artifacts_path = self.manager.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
 
+    def validate_schema(self, train_df, test_df):
+        """ Checks training and test dataframes to make sure they have matching schemas """
+        train_schema = analitico.dataset.Dataset.generate_schema(train_df)
+        if test_df:
+            test_schema = analitico.dataset.Dataset.generate_schema(test_df)
+            train_columns = train_schema["columns"]
+            test_columns = test_schema["columns"]
+            if len(train_columns) != len(test_columns):
+                msg = "{} - training data has {} columns while test data has {} columns".format(
+                    self.name, len(train_columns), len(test_columns)
+                )
+                raise PluginError(msg)
+            for i in range(0, len(train_columns)):
+                if train_columns[i]["name"] != test_columns[i]["name"]:
+                    msg = "{} - column {} of train '{}' and test '{}' have different names".format(
+                        self.name, i,  train_columns[i]["name"], test_columns[i]["name"]
+                    )
+                    raise PluginError(msg)
+                if train_columns[i]["type"] != test_columns[i]["type"]:
+                    msg = "- column %d of train '%s' and test '%s' have different names".format(
+                        self.name, i,
+                        train_columns[i]["type"],
+                        test_columns[i]["type"]
+                    )
+                    raise PluginError(msg)
+        return train_schema
+
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
         try:
@@ -77,10 +106,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
             test_df = test
 
             # if not specified the prediction target will be the last column of the dataset
-            label = self.get_attribute("features.label")
+            label = self.get_attribute("data.label")
             if not label:
                 label = train_df.columns[len(train_df.columns) - 1]
-            self.info("label: " + label)
+            results["data"]["label"] = label
 
             # remove rows with missing label from training and test sets
             train_rows = len(train_df)
@@ -93,33 +122,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
                 if len(test_df) < test_rows:
                     self.warning("test data has %s rows without '%s' label", test_rows - len(test_df), label)
 
-            # infer schema from pandas dataframe
-            train_schema = analitico.dataset.Dataset.generate_schema(train_df)
-            train_columns = train_schema["columns"]
-            if test_df:
-                # if test set was provided separately, check to make sure schema matches
-                test_schema = analitico.dataset.Dataset.generate_schema(test_df)
-                test_columns = test_schema["columns"]
-                if len(train_columns) != len(test_columns):
-                    msg = "{} - training data has {} columns while test data has {} columns".format(
-                        self.name, len(train_columns), len(test_columns)
-                    )
-                    raise PluginError(msg)
-                for i in range(0, len(train_columns)):
-                    if train_columns[i]["name"] != test_columns[i]["name"]:
-                        raise PluginError(
-                            self.name + "- column %d of train '%s' and test '%s' have different names",
-                            i,
-                            train_columns[i]["name"],
-                            test_columns[i]["name"],
-                        )
-                    if train_columns[i]["type"] != test_columns[i]["type"]:
-                        raise PluginError(
-                            self.name + "- column %d of train '%s' and test '%s' have different names",
-                            i,
-                            train_columns[i]["type"],
-                            test_columns[i]["type"],
-                        )
+            # make sure schemas match
+            train_schema = self.validate_schema(train_df, test_df)
 
             # shortened training was requested?
             tail = self.get_attribute("parameters.tail", 0)
@@ -131,9 +135,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
             if not test_df:
                 # decide how to create test set from settings variable
                 # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html
-                chronological = self.get_attribute("parameters.chronological", False)
+                chronological = self.get_attribute("data.chronological", False)
                 test_size = self.get_attribute("parameters.test_size", 0.20)
-                self.info("parameters.test_size: %f", test_size)
+                results["data"]["chronological"] = chronological
+                results["parameters"]["test_size"] = test_size
                 if chronological:
                     # test set if from the last rows (chronological order)
                     self.info("chronological test split")
@@ -149,7 +154,6 @@ class CatBoostPlugin(IAlgorithmPlugin):
             self.info("test set %d rows", len(test_df))
 
             # validate data types
-            categorical_idx = []
             for column in train_schema["columns"]:
                 if column["type"] not in ("integer", "float", "boolean", "category"):
                     self.warning(
@@ -157,6 +161,13 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     )
                     train_df = train_df.drop(column["name"], axis=1)
                     test_df = test_df.drop(column["name"], axis=1)
+
+            # save schema after dropping unused columns
+            results["data"]["schema"] = analitico.dataset.Dataset.generate_schema(train_df)
+            results["data"]["source_records"] = len(train)
+            results["data"]["training_records"] = len(train_df)
+            results["data"]["test_records"] = len(test_df)
+            results["data"]["dropped_records"] = len(train) - len(train_df) - len(test_df)
 
             # split data and labels
             train_labels = train_df[label]
@@ -171,10 +182,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # create regressor or classificator then train
             training_on = time_ms()
-            model = self.create_model()
-            self.info("training %s...", model)
+            model = self.create_model(results)
             model.fit(train_pool, eval_set=test_pool)
-            results["meta"]["training_ms"] = time_ms(training_on)
+            results["performance"]["training_ms"] = time_ms(training_on)
 
             # score test set, add related metrics to results
             self.score_training(model, test_df, test_pool, test_labels, results)
@@ -185,6 +195,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             results_path = os.path.join(artifacts_path, "model.json")
             model.save_model(model_path)
             save_json(results, results_path)
+            results["scores"]["model_size"] = os.path.getsize(model_path)
             self.info("saved %s (%d bytes)", model_path, os.path.getsize(model_path))
             self.info("saved %s (%d bytes)", results_path, os.path.getsize(results_path))
 

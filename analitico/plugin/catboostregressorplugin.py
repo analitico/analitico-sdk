@@ -32,25 +32,20 @@ class CatBoostRegressorPlugin(CatBoostPlugin):
     class Meta(CatBoostPlugin.Meta):
         name = "analitico.plugin.CatBoostRegressorPlugin"
 
-    def create_model(self):
+    def create_model(self, results):
         """ Creates a CatBoostRegressor configured as requested """
         iterations = self.get_attribute("parameters.iterations", 50)
         learning_rate = self.get_attribute("parameters.learning_rate", 1)
         depth = self.get_attribute("parameters.depth", 8)
-        self.info("creating classifier")
-        self.info("parameters.iterations: %d", iterations)
-        self.info("parameters.learning_rate: %f", learning_rate)
-        self.info("parameters.depth: %d", depth)
+        results["parameters"]["iterations"] = iterations
+        results["parameters"]["learning_rate"] = learning_rate
+        results["parameters"]["depth"] = depth
         return catboost.CatBoostRegressor(iterations=iterations, learning_rate=learning_rate, depth=8)
 
     def score_training(self, model, test_df, test_pool, test_labels, results):
-        """ Scores the results of this training for the CatBoostClassifier model """
-        # make the prediction using the resulting model
-        test_predictions = model.predict(test_pool)
-
-        # loss metrics on test set
-        scores = results["data"]["scores"] = {}
-        scores["median_abs_error"] = round(median_absolute_error(test_predictions, test_labels), 5)
-        scores["mean_abs_error"] = round(mean_absolute_error(test_predictions, test_labels), 5)
-        scores["sqrt_mean_squared_error"] = round(np.sqrt(mean_squared_error(test_predictions, test_labels)), 5)
+        """ Runs predictions on test set then stores metrics in results["scores"] """
+        test_preds = model.predict(test_pool)
+        results["scores"]["median_abs_error"] = round(median_absolute_error(test_preds, test_labels), 5)
+        results["scores"]["mean_abs_error"] = round(mean_absolute_error(test_preds, test_labels), 5)
+        results["scores"]["sqrt_mean_squared_error"] = round(np.sqrt(mean_squared_error(test_preds, test_labels)), 5)
         return super().score_training(model, test_df, test_pool, test_labels, results)

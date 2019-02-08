@@ -30,23 +30,24 @@ class CatBoostClassifierPlugin(CatBoostPlugin):
     class Meta(CatBoostPlugin.Meta):
         name = "analitico.plugin.CatBoostClassifierPlugin"
 
-    def create_model(self):
+    def create_model(self, results):
         """ Creates a CatBoostClassifier configured as requested """
         iterations = self.get_attribute("parameters.iterations", 50)
         learning_rate = self.get_attribute("parameters.learning_rate", 1)
-        self.logger.info("iterations: " + iterations)
-        self.logger.info("learning_rate: " + learning_rate)
+        depth = self.get_attribute("parameters.depth", 8)
+        results["parameters"]["iterations"] = iterations
+        results["parameters"]["learning_rate"] = learning_rate
+        results["parameters"]["depth"] = depth
         # loss function could be LogLoss for binary classification
         return catboost.CatBoostClassifier(
-            iterations=iterations, learning_rate=learning_rate, loss_function="MultiClass"
+            iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="MultiClass"
         )
 
     def score_training(self, model, test_df, test_pool, test_labels, results):
         """ Scores the results of this training for the CatBoostClassifier model """
         # There are many metrics available:
         # https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics
-        scores = results["data"]["scores"] = {}
-
+        scores = results["scores"]
         train_classes = results["data"]["classes"]  # the classes (actual strings)
         train_classes_codes = list(range(0, len(train_classes)))  # the codes, eg: 0, 1, 2...
 

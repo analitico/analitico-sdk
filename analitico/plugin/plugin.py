@@ -9,6 +9,7 @@ import re
 import requests
 import json
 import tempfile
+import multiprocessing
 
 import urllib.parse
 from urllib.parse import urlparse
@@ -18,6 +19,7 @@ from abc import ABC, abstractmethod
 # https://github.com/faif/python-patterns
 
 from analitico.mixin import AttributeMixin
+from analitico.utilities import time_ms
 
 ##
 ## IPluginManager
@@ -272,13 +274,23 @@ class IAlgorithmPlugin(IPlugin):
         """
         assert isinstance(args[0], pandas.DataFrame)
 
-        results = collections.OrderedDict({"data": {}, "meta": {}})
+        started_on = time_ms()
+        results = collections.OrderedDict({
+            "type": "analitico/training",
+            "algorithm": self.Meta.name,
+            "data": {}, # number of records, etc
+            "parameters": {}, # model parameters, hyperparameters
+            "scores": {}, # training scores
+            "performance": { # time elapsed, cpu, gpu, memory, disk, etc
+                "cpu_count": multiprocessing.cpu_count()
+            } 
+        })
+        
         train = args[0]
         test = args[1] if len(args) > 1 else None
         results = self.train(train, test, results, *args, **kwargs)
 
-        # TODO add global timing
-
+        results["performance"]["total_ms"] = time_ms(started_on)
         return results
 
     @abstractmethod
