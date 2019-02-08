@@ -21,9 +21,9 @@ class DataframePipelinePlugin(PipelinePlugin):
         inputs = None
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
-    def run(self, *args, **kwargs):
+    def run(self, action=None, *args, **kwargs):
         """ Process the plugins in sequence then save the resulting dataframe """
-        df = super().run(*args, **kwargs)
+        df = super().run(action, *args, **kwargs)
         if not isinstance(df, pd.DataFrame):
             self.logger.warn("DataframePipelinePlugin.run - pipeline didn't produce a valid dataframe")
             return None

@@ -25,8 +25,8 @@ class RecipePipelinePlugin(PipelinePlugin):
 
     def run(self, *args, **kwargs):
         """ Process the plugins in sequence then create trained model """
-        training_info = super().run(*args, **kwargs)
-        if not isinstance(training_info, dict):
+        model_info = super().run(*args, **kwargs)
+        if not isinstance(model_info, dict):
             self.logger.warn("RecipePipelinePlugin.run - pipeline didn't produce a dictionary with training results")
             return None
 
@@ -37,4 +37,4 @@ class RecipePipelinePlugin(PipelinePlugin):
         artifacts_path = self.manager.get_artifacts_directory()
         # ...
 
-        return df
+        return model_info

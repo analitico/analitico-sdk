@@ -1,4 +1,5 @@
 import logging
+import collections
 import pandas
 import tempfile
 import os.path
@@ -176,11 +177,6 @@ class IPlugin(ABC, AttributeMixin):
         assert self.Meta.name
         return self.Meta.name
 
-    @property
-    def logger(self):
-        """ Logger that can be used by the plugin to communicate errors, etc with host """
-        return logging.getLogger(self.name)
-
     def __init__(self, manager: IPluginManager, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.manager = manager
@@ -190,7 +186,7 @@ class IPlugin(ABC, AttributeMixin):
         pass
 
     @abstractmethod
-    def run(self, *args, **kwargs):
+    def run(self, action=None, *args, **kwargs):
         """ Run will do in the subclass whatever the plugin does """
         pass
 
@@ -200,6 +196,22 @@ class IPlugin(ABC, AttributeMixin):
 
     def __str__(self):
         return self.name
+
+    # Logging
+
+    @property
+    def logger(self):
+        """ Logger that can be used by the plugin to communicate errors, etc with host """
+        return logging.getLogger(self.name)
+
+    def info(self, format, *args):
+        self.logger.info(format, *args)
+
+    def warning(self, format, *args):
+        self.logger.warning(format, *args)
+
+    def error(self, format, *args):
+        self.logger.error(format, *args)
 
 
 ##
@@ -215,7 +227,7 @@ class IDataframeSourcePlugin(IPlugin):
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
     @abstractmethod
-    def run(self, *args, **kwargs):
+    def run(self, action=None, *args, **kwargs):
         """ Run creates a dataset from the source and returns it """
         pass
 
@@ -235,7 +247,7 @@ class IDataframePlugin(IPlugin):
         inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
-    def run(self, *args, **kwargs) -> pandas.DataFrame:
+    def run(self, action=None, *args, **kwargs) -> pandas.DataFrame:
         assert isinstance(args[0], pandas.DataFrame)
         return args[0]
 
@@ -249,28 +261,30 @@ class IAlgorithmPlugin(IPlugin):
     """ An algorithm used to create machine learning models from training data """
 
     class Meta(IPlugin.Meta):
-        inputs = [
-            {"name": "training", "type": "pandas.DataFrame"},
-            {"name": "validation", "type": "pandas.DataFrame|none"},
-        ]
+        inputs = [{"name": "train", "type": "pandas.DataFrame"}, {"name": "test", "type": "pandas.DataFrame|none"}]
         outputs = [{"name": "model", "type": "dict"}]
 
-    def run(self, *args, **kwargs) -> pandas.DataFrame:
+    def run(self, action, *args, **kwargs) -> pandas.DataFrame:
         """ 
         When an algorithm runs it always takes in a dataframe with training data,
         it may optionally have a dataframe of validation data and will return a dictionary
         with information on the trained model plus a number of artifacts.
         """
         assert isinstance(args[0], pandas.DataFrame)
-        training = args[0]
-        validation = args[1] if len(args) > 1 and isinstance(args[1], pandas.DataFrame) else None
-        model = self.train(training, validation, *args, **kwargs)
-        return model
+
+        results = collections.OrderedDict({"data": {}, "meta": {}})
+        train = args[0]
+        test = args[1] if len(args) > 1 else None
+        results = self.train(train, test, results, *args, **kwargs)
+
+        # TODO add global timing
+
+        return results
 
     @abstractmethod
-    def train(self, training, validation, *args, **kwargs):
+    def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
-        return None
+        pass
 
 
 ##

@@ -18,7 +18,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
     class Meta(IDataframeSourcePlugin.Meta):
         name = "analitico.plugin.CsvDataframeSourcePlugin"
 
-    def run(self, *args, **kwargs):
+    def run(self, action=None, *args, **kwargs):
         """ Creates a pandas dataframe from the csv source """
         try:
             url = self.get_attribute("source.url")
@@ -58,9 +58,6 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
                     if column.get("index", False):
                         index = column["name"]
 
-            url = self.get_attribute("source.url")
-            if not url:
-                raise PluginError("URL of csv file cannot be empty.", plugin=self)
             stream = self.manager.get_url_stream(url)
             df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates)
 

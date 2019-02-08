@@ -15,12 +15,13 @@ from .transforms import CodeDataframePlugin
 
 # machine learning algorithms
 from .catboostplugin import CatBoostPlugin
-from .catboostplugin import CatBoostRegressorPlugin
-from .catboostplugin import CatBoostClassifierPlugin
+from .catboostregressorplugin import CatBoostRegressorPlugin
+from .catboostclassifierplugin import CatBoostClassifierPlugin
 
 # plugin workflows
 from .pipelineplugin import PipelinePlugin
 from .dataframepipelineplugin import DataframePipelinePlugin
+from .recipepipelineplugin import RecipePipelinePlugin
 from .graphplugin import GraphPlugin
 
 # plugin names
