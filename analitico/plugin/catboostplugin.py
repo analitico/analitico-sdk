@@ -86,14 +86,12 @@ class CatBoostPlugin(IAlgorithmPlugin):
             for i in range(0, len(train_columns)):
                 if train_columns[i]["name"] != test_columns[i]["name"]:
                     msg = "{} - column {} of train '{}' and test '{}' have different names".format(
-                        self.name, i,  train_columns[i]["name"], test_columns[i]["name"]
+                        self.name, i, train_columns[i]["name"], test_columns[i]["name"]
                     )
                     raise PluginError(msg)
                 if train_columns[i]["type"] != test_columns[i]["type"]:
                     msg = "- column %d of train '%s' and test '%s' have different names".format(
-                        self.name, i,
-                        train_columns[i]["type"],
-                        test_columns[i]["type"]
+                        self.name, i, train_columns[i]["type"], test_columns[i]["type"]
                     )
                     raise PluginError(msg)
         return train_schema

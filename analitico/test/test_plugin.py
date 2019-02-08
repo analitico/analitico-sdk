@@ -71,11 +71,11 @@ class PluginTests(unittest.TestCase, TestMixin):
         plugin = self.manager.create_plugin(CODE_DATAFRAME_PLUGIN, code=code)
 
         # dataframe passed as POSITIONAL parameter
-        df = plugin.run(df)
+        df = plugin.run("dataset/process", df)
         self.assertEqual(df.loc[0, "First"], 12)
 
         # dataframe passed as POSITIONAL parameter
-        df = plugin.run(df)
+        df = plugin.run("dataset/process", df)
         self.assertEqual(df.loc[0, "First"], 14)
 
     def test_plugin_code_dataframe_bug(self):
@@ -91,7 +91,7 @@ class PluginTests(unittest.TestCase, TestMixin):
         plugin = self.manager.create_plugin(CODE_DATAFRAME_PLUGIN, code=code)
 
         with self.assertRaises(PluginError):
-            df = plugin.run(df)
+            df = plugin.run("dataset/process", df)
 
     def test_plugin_pipeline(self):
         """ Test grouping plugins into a multi step pipeline to retrieve and process a dataframe """

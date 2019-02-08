@@ -275,17 +275,17 @@ class IAlgorithmPlugin(IPlugin):
         assert isinstance(args[0], pandas.DataFrame)
 
         started_on = time_ms()
-        results = collections.OrderedDict({
-            "type": "analitico/training",
-            "algorithm": self.Meta.name,
-            "data": {}, # number of records, etc
-            "parameters": {}, # model parameters, hyperparameters
-            "scores": {}, # training scores
-            "performance": { # time elapsed, cpu, gpu, memory, disk, etc
-                "cpu_count": multiprocessing.cpu_count()
-            } 
-        })
-        
+        results = collections.OrderedDict(
+            {
+                "type": "analitico/training",
+                "algorithm": self.Meta.name,
+                "data": {},  # number of records, etc
+                "parameters": {},  # model parameters, hyperparameters
+                "scores": {},  # training scores
+                "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
+            }
+        )
+
         train = args[0]
         test = args[1] if len(args) > 1 else None
         results = self.train(train, test, results, *args, **kwargs)
