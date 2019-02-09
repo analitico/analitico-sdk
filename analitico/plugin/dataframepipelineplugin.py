@@ -2,6 +2,7 @@ import analitico.utilities
 import pandas as pd
 import os
 
+from analitico.schema import generate_schema
 from .pipelineplugin import PipelinePlugin
 
 ##
@@ -37,7 +38,7 @@ class DataframePipelinePlugin(PipelinePlugin):
         df.to_csv(csv_path, index=index)
 
         # save schema as data.csv.info
-        schema = analitico.dataset.Dataset.generate_schema(df)
+        schema = generate_schema(df)
         csv_info_path = csv_path + ".info"
         analitico.utilities.save_json({"schema": schema}, csv_info_path)
 

@@ -9,9 +9,11 @@ import requests
 import sklearn
 import os.path
 
-from abc import ABC, abstractmethod
-from analitico.utilities import analitico_to_pandas_type, get_dict_dot
+from analitico.utilities import get_dict_dot
 from analitico.utilities import time_ms, save_json
+from analitico.schema import analitico_to_pandas_type
+
+from abc import ABC, abstractmethod
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
 from sklearn.metrics import precision_score, recall_score, accuracy_score

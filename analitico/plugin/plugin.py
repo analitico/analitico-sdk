@@ -11,6 +11,7 @@ import json
 import tempfile
 import multiprocessing
 import urllib.parse
+import os
 
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
@@ -20,6 +21,7 @@ from abc import ABC, abstractmethod
 
 from analitico.mixin import AttributeMixin
 from analitico.utilities import time_ms, save_json, read_json
+from analitico.schema import apply_schema
 
 ##
 ## IPluginManager
@@ -78,8 +80,10 @@ class IPluginManager(ABC, AttributeMixin):
 
     def get_cache_directory(self):
         """ Returns directory to be used for caches """
-        # method is separate from temp in case we later decide to share local caches
-        return self.get_temporary_directory()
+        cache_path = os.path.join(tempfile.tempdir, "analitico_cache")
+        if not os.path.isdir(cache_path):
+            os.mkdir(cache_path)
+        return cache_path
 
     ##
     ## URL retrieval, authorization and caching
@@ -318,10 +322,16 @@ class IAlgorithmPlugin(IPlugin):
             {
                 "type": "analitico/prediction",
                 "records": None,  # data may be returned along with predictions
-                "predictions": {},  # predictions
+                "predictions": None,  # predictions
                 "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
             }
         )
+        
+        # force schema like in training data
+        schema = training["data"]["schema"]
+        data = apply_schema(data, schema)
+
+        # load model, calculate predictions
         results = self.predict(data, training, results, *args, **kwargs)
         results["performance"]["total_ms"] = time_ms(started_on)
         return results

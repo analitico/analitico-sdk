@@ -3,6 +3,7 @@ import unittest
 import pandas as pd
 
 from analitico.dataset import Dataset
+from analitico.schema import generate_schema
 
 from .testmixin import TestMixin
 
@@ -245,7 +246,7 @@ class DatasetTests(unittest.TestCase, TestMixin):
         """ Test automatically generating an analitico schema from a pandas dataframe """
         try:
             df = self.read_dataframe_asset("ds_test_7_autoschema.json")
-            schema = Dataset.generate_schema(df)
+            schema = generate_schema(df)
 
             columns = schema["columns"]
             self.assertEqual(len(columns), 12)

@@ -10,8 +10,9 @@ import sklearn
 import os.path
 
 from abc import ABC, abstractmethod
-from analitico.utilities import analitico_to_pandas_type, get_dict_dot
+from analitico.utilities import get_dict_dot
 from analitico.utilities import time_ms, save_json
+from analitico.schema import generate_schema, analitico_to_pandas_type
 from .plugin import IAlgorithmPlugin, PluginError
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
@@ -25,6 +26,7 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 class CatBoostPlugin(IAlgorithmPlugin):
     """ Base class for CatBoost regressor and classifier plugins """
 
+
     results = None
 
     class Meta(IAlgorithmPlugin.Meta):
@@ -37,9 +39,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
     def validate_schema(self, train_df, test_df):
         """ Checks training and test dataframes to make sure they have matching schemas """
-        train_schema = analitico.dataset.Dataset.generate_schema(train_df)
+        train_schema = generate_schema(train_df)
         if test_df:
-            test_schema = analitico.dataset.Dataset.generate_schema(test_df)
+            test_schema = generate_schema(test_df)
             train_columns = train_schema["columns"]
             test_columns = test_schema["columns"]
             if len(train_columns) != len(test_columns):
@@ -161,7 +163,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     test_df = test_df.drop(column["name"], axis=1)
 
             # save schema after dropping unused columns
-            results["data"]["schema"] = analitico.dataset.Dataset.generate_schema(train_df)
+            results["data"]["schema"] = generate_schema(train_df)
             results["data"]["source_records"] = len(train)
             results["data"]["training_records"] = len(train_df)
             results["data"]["test_records"] = len(test_df)
@@ -200,7 +202,3 @@ class CatBoostPlugin(IAlgorithmPlugin):
             self.error("error while training: %s", exc)
             self.logger.exception(exc)
             raise exc
-
-    def predict(self, data, training, results, *args, **kwargs):
-        """ Return predictions from trained model """
-        return results

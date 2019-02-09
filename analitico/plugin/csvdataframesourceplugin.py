@@ -4,7 +4,8 @@ Plugins that import dataframes from different sources
 
 import requests
 import pandas
-from analitico.utilities import analitico_to_pandas_type, get_dict_dot
+from analitico.utilities import get_dict_dot
+from analitico.schema import analitico_to_pandas_type
 from .plugin import IDataframeSourcePlugin, PluginError
 
 ##
