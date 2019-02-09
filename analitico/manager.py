@@ -4,6 +4,7 @@
 # this import is not here.
 import analitico.plugin
 
+from analitico.plugin import PluginError
 from analitico.dataset import Dataset
 
 ##
@@ -19,16 +20,19 @@ class PluginManager(analitico.plugin.IPluginManager):
 
     # TODO could register external plugins
 
-    def _get_class_from_fully_qualified_name(self, name, module=None):
+    def _get_class_from_fully_qualified_name(self, name, module=None, globals=globals()):
         """ Gets a class from its fully qualified name, eg: package.module.Class """
-        if name:
-            split = name.split(".")
-            if len(split) > 1:
-                prefix = split[0]
-                name = name[len(split[0]) + 1 :]
-                module = getattr(module, prefix) if module else globals()[prefix]
-                return self._get_class_from_fully_qualified_name(name, module)
-            return getattr(module, split[0])
+        try:
+            if name:
+                split = name.split(".")
+                if len(split) > 1:
+                    prefix = split[0]
+                    name = name[len(split[0]) + 1 :]
+                    module = getattr(module, prefix) if module else globals[prefix]
+                    return self._get_class_from_fully_qualified_name(name, module)
+                return getattr(module, split[0])
+        except Exception as exc:
+            pass
         return None
 
     def create_plugin(self, name: str, **kwargs):
