@@ -35,42 +35,6 @@ class CatBoostPlugin(IAlgorithmPlugin):
         """ Creates actual CatBoostClassifier or CatBoostRegressor model in subclass """
         pass
 
-    def score_training(
-        self,
-        model: catboost.CatBoost,
-        test_df: pd.DataFrame,
-        test_pool: catboost.Pool,
-        test_labels: pd.DataFrame,
-        results: dict,
-    ):
-        """ Scores the results of this training """
-        for key, value in model.get_params().items():
-            results["parameters"][key] = value
-
-        results["scores"]["best_iteration"] = model.get_best_iteration()
-        results["scores"]["best_score"] = model.get_best_score()
-
-        # catboost can tell which features weigh more heavily on the predictions
-        self.info("features importance:")
-        features_importance = results["data"]["features_importance"] = {}
-        for label, importance in model.get_feature_importance(prettified=True):
-            features_importance[label] = round(importance, 5)
-            self.info("%24s: %8.4f", label, importance)
-
-        # make the prediction using the resulting model
-        # output test set with predictions
-        # after moving label to the end for easier reading
-        test_predictions = model.predict(test_pool)
-        label = test_labels.name
-        test_df = test_df.copy().tail(100)  # just sampling
-        test_df[label] = test_labels
-        cols = list(test_df.columns.values)
-        cols.pop(cols.index(label))
-        test_df = test_df[cols + [label]]
-        test_df["prediction"] = test_predictions[-100:]  # match sample above
-        artifacts_path = self.manager.get_artifacts_directory()
-        test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
-
     def validate_schema(self, train_df, test_df):
         """ Checks training and test dataframes to make sure they have matching schemas """
         train_schema = analitico.dataset.Dataset.generate_schema(train_df)
@@ -96,6 +60,42 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     raise PluginError(msg)
         return train_schema
 
+    def score_training(
+        self,
+        model: catboost.CatBoost,
+        test_df: pd.DataFrame,
+        test_pool: catboost.Pool,
+        test_labels: pd.DataFrame,
+        results: dict,
+    ):
+        """ Scores the results of this training """
+        for key, value in model.get_params().items():
+            results["parameters"][key] = value
+
+        results["scores"]["best_iteration"] = model.get_best_iteration()
+        results["scores"]["best_score"] = model.get_best_score()
+
+        # catboost can tell which features weigh more heavily on the predictions
+        self.info("features importance:")
+        features_importance = results["scores"]["features_importance"] = {}
+        for label, importance in model.get_feature_importance(prettified=True):
+            features_importance[label] = round(importance, 5)
+            self.info("%24s: %8.4f", label, importance)
+
+        # make the prediction using the resulting model
+        # output test set with predictions
+        # after moving label to the end for easier reading
+        test_predictions = model.predict(test_pool)
+        label = test_labels.name
+        test_df = test_df.copy().tail(100)  # just sampling
+        test_df[label] = test_labels
+        cols = list(test_df.columns.values)
+        cols.pop(cols.index(label))
+        test_df = test_df[cols + [label]]
+        test_df["prediction"] = test_predictions[-100:]  # match sample above
+        artifacts_path = self.manager.get_artifacts_directory()
+        test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
+        
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
         try:
@@ -190,12 +190,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
             # save model file and training results
             artifacts_path = self.manager.get_artifacts_directory()
             model_path = os.path.join(artifacts_path, "model.cbm")
-            results_path = os.path.join(artifacts_path, "model.json")
             model.save_model(model_path)
-            save_json(results, results_path)
             results["scores"]["model_size"] = os.path.getsize(model_path)
             self.info("saved %s (%d bytes)", model_path, os.path.getsize(model_path))
-            self.info("saved %s (%d bytes)", results_path, os.path.getsize(results_path))
 
             return results
 

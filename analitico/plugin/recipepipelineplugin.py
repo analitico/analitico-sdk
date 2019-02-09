@@ -1,7 +1,9 @@
 import analitico.utilities
 import pandas as pd
 import os
+import os.path
 
+from .plugin import PluginError
 from .pipelineplugin import PipelinePlugin
 
 ##
@@ -24,17 +26,17 @@ class RecipePipelinePlugin(PipelinePlugin):
         outputs = [{"model": "dict"}]
 
     def run(self, *args, **kwargs):
-        """ Process the plugins in sequence then create trained model """
+        """ Process the plugins in sequence to create trained model artifacts """
         model_info = super().run(*args, **kwargs)
         if not isinstance(model_info, dict):
-            self.logger.warn("RecipePipelinePlugin.run - pipeline didn't produce a dictionary with training results")
-            return None
+            msg = "Pipeline didn't produce a dictionary with training results"
+            self.error(msg)
+            raise PluginError(msg, self)
 
-        # create model object
-        # scan artifacts
-        # upload artifacts to model
-        # delete artifacts so they are not loaded to the recipe
+        # training.json, trained models and other artifacts should 
+        # now be in the artifacts directory. depending on the environment
+        # these may be left on disk (SDK) or stored in cloud (APIs)
         artifacts_path = self.manager.get_artifacts_directory()
-        # ...
+        assert len(os.listdir(artifacts_path)) >= 1
 
         return model_info
