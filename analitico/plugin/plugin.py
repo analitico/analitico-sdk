@@ -278,7 +278,10 @@ class IAlgorithmPlugin(IPlugin):
         results = collections.OrderedDict(
             {
                 "type": "analitico/training",
-                "algorithm": self.Meta.name,
+                "plugins": {
+                    "training": self.Meta.name,  # plugin used to train model
+                    "prediction": self.Meta.name,  # plugin to be used for predictions (usually the same)
+                },
                 "data": {},  # number of records, etc
                 "parameters": {},  # model parameters, hyperparameters
                 "scores": {},  # training scores

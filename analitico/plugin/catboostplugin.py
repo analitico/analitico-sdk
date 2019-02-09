@@ -95,7 +95,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
         test_df["prediction"] = test_predictions[-100:]  # match sample above
         artifacts_path = self.manager.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
-        
+
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
         try:

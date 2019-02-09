@@ -25,18 +25,17 @@ class RecipePipelinePlugin(PipelinePlugin):
         inputs = None
         outputs = [{"model": "dict"}]
 
-    def run(self, *args, **kwargs):
+    def run(self, action=None, *args, **kwargs):
         """ Process the plugins in sequence to create trained model artifacts """
-        model_info = super().run(*args, **kwargs)
-        if not isinstance(model_info, dict):
+        results = super().run(action, *args, **kwargs)
+        if not isinstance(results, dict):
             msg = "Pipeline didn't produce a dictionary with training results"
             self.error(msg)
             raise PluginError(msg, self)
 
-        # training.json, trained models and other artifacts should 
+        # training.json, trained models and other artifacts should
         # now be in the artifacts directory. depending on the environment
         # these may be left on disk (SDK) or stored in cloud (APIs)
         artifacts_path = self.manager.get_artifacts_directory()
         assert len(os.listdir(artifacts_path)) >= 1
-
-        return model_info
+        return results
