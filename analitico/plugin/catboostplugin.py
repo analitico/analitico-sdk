@@ -200,3 +200,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             self.error("error while training: %s", exc)
             self.logger.exception(exc)
             raise exc
+
+    def predict(self, data, training, results, *args, **kwargs):
+        """ Return predictions from trained model """
+        return results

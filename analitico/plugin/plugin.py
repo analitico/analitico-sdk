@@ -10,8 +10,8 @@ import requests
 import json
 import tempfile
 import multiprocessing
-
 import urllib.parse
+
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 
@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 # https://github.com/faif/python-patterns
 
 from analitico.mixin import AttributeMixin
-from analitico.utilities import time_ms, save_json
+from analitico.utilities import time_ms, save_json, read_json
 
 ##
 ## IPluginManager
@@ -266,14 +266,13 @@ class IAlgorithmPlugin(IPlugin):
         inputs = [{"name": "train", "type": "pandas.DataFrame"}, {"name": "test", "type": "pandas.DataFrame|none"}]
         outputs = [{"name": "model", "type": "dict"}]
 
-    def run(self, action, *args, **kwargs) -> pandas.DataFrame:
+    def _run_train(self, *args, **kwargs):
         """ 
         When an algorithm runs it always takes in a dataframe with training data,
         it may optionally have a dataframe of validation data and will return a dictionary
         with information on the trained model plus a number of artifacts.
         """
         assert isinstance(args[0], pandas.DataFrame)
-
         started_on = time_ms()
         results = collections.OrderedDict(
             {
@@ -299,12 +298,51 @@ class IAlgorithmPlugin(IPlugin):
         results_path = os.path.join(artifacts_path, "training.json")
         save_json(results, results_path)
         self.info("saved %s (%d bytes)", results_path, os.path.getsize(results_path))
-
         return results
+
+    def _run_predict(self, *args, **kwargs):
+        """ 
+        When an algorithm runs it always takes in a dataframe with training data,
+        it may optionally have a dataframe of validation data and will return a dictionary
+        with information on the trained model plus a number of artifacts.
+        """
+        assert isinstance(args[0], pandas.DataFrame)
+        data = args[0]
+
+        artifacts_path = self.manager.get_artifacts_directory()
+        training = read_json(os.path.join(artifacts_path, "training.json"))
+        assert training
+
+        started_on = time_ms()
+        results = collections.OrderedDict(
+            {
+                "type": "analitico/prediction",
+                "records": None,  # data may be returned along with predictions
+                "predictions": {},  # predictions
+                "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
+            }
+        )
+        results = self.predict(data, training, results, *args, **kwargs)
+        results["performance"]["total_ms"] = time_ms(started_on)
+        return results
+
+    def run(self, action, *args, **kwargs):
+        """ Algorithm can run to train a model or to predict from a trained model """
+        if action.endswith("/train"):
+            return self._run_train(*args, **kwargs)
+        if action.endswith("/predict"):
+            return self._run_predict(*args, **kwargs)
+        self.error("unknown action: %s", action)
+        raise PluginError("IAlgorithmPlugin - action should be /train or /predict")
 
     @abstractmethod
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
+        pass
+
+    @abstractmethod
+    def predict(self, data, training, results, *args, **kwargs):
+        """ Return predictions from trained model """
         pass
 
 

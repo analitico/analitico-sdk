@@ -1,5 +1,5 @@
 import analitico.utilities
-import pandas
+import pandas as pd
 import os
 import os.path
 
@@ -27,20 +27,26 @@ class EndpointPipelinePlugin(PipelinePlugin):
 
     def run(self, action=None, *args, **kwargs):
         """ Process the plugins in sequence to run predictions """
-        assert args[0] and isinstance(args[0], pandas.DataFrame)
+        try:
+            assert isinstance(args[0], pd.DataFrame)
+            data_df = args[0]
 
-        # read training information from disk
-        artifacts_path = self.manager.get_artifacts_directory()
-        training_path = os.path.join(artifacts_path, "training.json")
-        training = read_json(training_path)
-        assert training
+            # read training information from disk
+            artifacts_path = self.manager.get_artifacts_directory()
+            training_path = os.path.join(artifacts_path, "training.json")
+            training = read_json(training_path)
+            assert training
 
-        # if no plugins have been configured for the pipeline,
-        # create the plugin suggested by the training algorithm
-        if not self.plugins:
-            self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
+            # if no plugins have been configured for the pipeline,
+            # create the plugin suggested by the training algorithm
+            if not self.plugins:
+                self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
 
-        # run the pipeline, return predictions
-        predictions = super().run(action, *args, **kwargs)
-        assert predictions and isinstance(predictions, pandas.DataFrame)
-        return predictions
+            # run the pipeline, return predictions
+            predictions = super().run(action, data_df, *args, **kwargs)
+            return predictions
+
+        except Exception as exc:
+            self.error("Error while processing prediction pipeline")
+            self.logger.exception(exc)
+            raise exc
