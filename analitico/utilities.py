@@ -25,8 +25,13 @@ def save_json(data, filename, indent=4):
 
 def read_json(filename):
     """ Reads, decodes and returns the contents of a json file """
-    with open(filename) as f:
-        return json.load(f)
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except Exception as exc:
+        detail = "analitico.utilities.read_json: error while reading {}, exception: {}".format(filename, exc)
+        logger.error(detail)
+        raise Exception(detail, exc)
 
 
 def time_ms(started_on=None):
