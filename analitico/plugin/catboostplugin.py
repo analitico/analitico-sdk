@@ -26,7 +26,6 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 class CatBoostPlugin(IAlgorithmPlugin):
     """ Base class for CatBoost regressor and classifier plugins """
 
-
     results = None
 
     class Meta(IAlgorithmPlugin.Meta):

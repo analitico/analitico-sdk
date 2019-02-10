@@ -326,7 +326,7 @@ class IAlgorithmPlugin(IPlugin):
                 "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
             }
         )
-        
+
         # force schema like in training data
         schema = training["data"]["schema"]
         data = apply_schema(data, schema)

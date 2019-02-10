@@ -14,6 +14,7 @@ from datetime import datetime
 ## Schema
 ##
 
+
 def analitico_to_pandas_type(type: str):
     """ Converts an analitico data type to the equivalent dtype string for pandas dataframes """
     try:
@@ -61,6 +62,7 @@ def generate_schema(df: pd.DataFrame) -> dict:
         columns.append(column)
     return {"columns": columns}
 
+
 def apply_type(df: pd.DataFrame, **kwargs):
     """ Apply given type to the column (parameters are type, name, etc from schema column) """
     assert isinstance(df, pd.DataFrame)
@@ -68,27 +70,36 @@ def apply_type(df: pd.DataFrame, **kwargs):
     ctype = kwargs["type"]
     missing = cname not in df.columns
     if ctype == "string":
-        if missing: df[cname] = None
+        if missing:
+            df[cname] = None
         df[cname] = df[cname].astype(str)
     elif ctype == "float":
-        if missing: df[cname] = np.nan
+        if missing:
+            df[cname] = np.nan
         df[cname] = df[cname].astype(float)
     elif ctype == "boolean":
-        if missing: df[cname] = False
+        if missing:
+            df[cname] = False
         df[cname] = df[cname].astype(bool)
     elif ctype == "integer":
-        if missing: df[cname] = 0
+        if missing:
+            df[cname] = 0
         df[cname] = df[cname].astype(int)
     elif ctype == "datetime":
-        if missing: df[cname] = None
-        df[cname] = df[cname].astype('datetime64[ns]')
+        if missing:
+            df[cname] = None
+        df[cname] = df[cname].astype("datetime64[ns]")
     elif ctype == "timespan":
-        if missing: df[cname] = None
+        if missing:
+            df[cname] = None
         df[cname] = pd.to_timedelta(df[cname])
     elif ctype == "category":
-        if missing: df[cname] = None
-        df[cname] = df[cname].astype('category')
-    else: raise Exception("analitico.schema.apply_type - unknown type: " + ctype)
+        if missing:
+            df[cname] = None
+        df[cname] = df[cname].astype("category")
+    else:
+        raise Exception("analitico.schema.apply_type - unknown type: " + ctype)
+
 
 def apply_schema(df: pd.DataFrame, schema):
     """ 
