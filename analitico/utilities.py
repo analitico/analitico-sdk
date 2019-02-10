@@ -23,10 +23,10 @@ def save_json(data, filename, indent=4):
         json.dump(data, f, indent=indent)
 
 
-def read_json(filename):
+def read_json(filename, encoding="utf-8"):
     """ Reads, decodes and returns the contents of a json file """
     try:
-        with open(filename) as f:
+        with open(filename, encoding=encoding) as f:
             return json.load(f)
     except Exception as exc:
         detail = "analitico.utilities.read_json: error while reading {}, exception: {}".format(filename, exc)
