@@ -4,6 +4,10 @@ ANALITICO_PREFIX = "analitico://"
 ANALITICO_STAGING_API_ENDPOINT = "https://staging.analitico.ai/api/"
 ANALITICO_API_ENDPOINT = "https://analitico.ai/api/"
 
+ACTION_PROCESS = "process"  # process a dataframe to retrieve data
+ACTION_TRAIN = "train"  # train a recipe to procude a model
+ACTION_PREDICT = "predict"  # run a model to generate a prediction
+
 import analitico.utilities
 import analitico.plugin
 import analitico.dataset
