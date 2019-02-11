@@ -16,8 +16,10 @@ CSV_DATAFRAME_SOURCE_PLUGIN = CsvDataframeSourcePlugin.Meta.name
 
 # plugins to tranform dataframes
 from .transforms import CodeDataframePlugin
+from .augmentdatesdataframeplugin import AugmentDatesDataframePlugin
 
 CODE_DATAFRAME_PLUGIN = CodeDataframePlugin.Meta.name
+AUGMENT_DATES_DATAFRAME_PLUGIN = AugmentDatesDataframePlugin.Meta.name
 
 # machine learning algorithms
 from .catboostplugin import CatBoostPlugin  # abstract
