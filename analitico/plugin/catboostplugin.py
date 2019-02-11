@@ -36,6 +36,14 @@ class CatBoostPlugin(IAlgorithmPlugin):
         """ Creates actual CatBoostClassifier or CatBoostRegressor model in subclass """
         pass
 
+    def get_categorical_idx(self, df):
+        """ Return indexes of the columns that should be considered categorical for the purpose of catboost training """
+        categorical_idx = []
+        for column in df.columns:
+            if df[column].dtype.name == "category":
+                categorical_idx.append(df.columns.get_loc(column))
+        return categorical_idx
+
     def validate_schema(self, train_df, test_df):
         """ Checks training and test dataframes to make sure they have matching schemas """
         train_schema = generate_schema(train_df)
@@ -174,10 +182,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
             test_labels = test_df[label]
             test_df = test_df.drop([label], axis=1)
 
-            # train_pool = catboost.Pool(train_df, train_labels, cat_features=categorical_idx)
-            # test_pool = catboost.Pool(test_df, test_labels, cat_features=categorical_idx)
-            train_pool = catboost.Pool(train_df, train_labels)
-            test_pool = catboost.Pool(test_df, test_labels)
+            # indexes of columns that should be considered categorical
+            categorical_idx = self.get_categorical_idx(train_df)
+            train_pool = catboost.Pool(train_df, train_labels, cat_features=categorical_idx)
+            test_pool = catboost.Pool(test_df, test_labels, cat_features=categorical_idx)
 
             # create regressor or classificator then train
             training_on = time_ms()

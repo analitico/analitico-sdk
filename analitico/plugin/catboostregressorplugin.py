@@ -54,7 +54,8 @@ class CatBoostRegressorPlugin(CatBoostPlugin):
     def predict(self, data, training, results, *args, **kwargs):
         """ Return predictions from trained model """
         # initialize data pool to be tested
-        data_pool = catboost.Pool(data)
+        categorical_idx = self.get_categorical_idx(data)
+        data_pool = catboost.Pool(data, cat_features=categorical_idx)
 
         # create model object from stored file
         loading_on = time_ms()
