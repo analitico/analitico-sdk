@@ -14,18 +14,34 @@ from datetime import datetime
 ## Schema
 ##
 
+# pandas types for analitico's types
+PD_TYPE_INTEGER = "int64"
+PD_TYPE_FLOAT = "float64"
+PD_TYPE_STRING = "str"
+PD_TYPE_BOOLEAN = "bool"
+PD_TYPE_DATETIME = "datetime64"
+PD_TYPE_TIMESPAN = "timedelta64"
+PD_TYPE_CATEGORY = "category"
+
+ANALITICO_TYPE_INTEGER = "integer"
+ANALITICO_TYPE_FLOAT = "float"
+ANALITICO_TYPE_STRING = "string"
+ANALITICO_TYPE_BOOLEAN = "boolean"
+ANALITICO_TYPE_DATETIME = "datetime"
+ANALITICO_TYPE_TIMESPAN = "timespan"
+ANALITICO_TYPE_CATEGORY = "category"
 
 def analitico_to_pandas_type(type: str):
     """ Converts an analitico data type to the equivalent dtype string for pandas dataframes """
     try:
         ANALITICO_TO_PANDAS_TYPES = {
-            "string": "str",
-            "integer": "int64",
-            "float": "float64",
-            "boolean": "bool",
-            "datetime": "datetime64",
-            "timespan": "timedelta64",
-            "category": "category",
+            ANALITICO_TYPE_STRING: PD_TYPE_STRING,
+            ANALITICO_TYPE_INTEGER: PD_TYPE_INTEGER,
+            ANALITICO_TYPE_FLOAT: PD_TYPE_FLOAT,
+            ANALITICO_TYPE_BOOLEAN: PD_TYPE_BOOLEAN,
+            ANALITICO_TYPE_DATETIME: PD_TYPE_DATETIME,
+            ANALITICO_TYPE_TIMESPAN: PD_TYPE_TIMESPAN,
+            ANALITICO_TYPE_CATEGORY: PD_TYPE_CATEGORY,
         }
         return ANALITICO_TO_PANDAS_TYPES[type]
     except KeyError as exc:
