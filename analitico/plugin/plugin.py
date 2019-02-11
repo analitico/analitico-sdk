@@ -80,7 +80,8 @@ class IPluginManager(ABC, AttributeMixin):
 
     def get_cache_directory(self):
         """ Returns directory to be used for caches """
-        cache_path = os.path.join(tempfile.tempdir, "analitico_cache")
+
+        cache_path = os.path.join(tempfile.gettempdir(), "analitico_cache")
         if not os.path.isdir(cache_path):
             os.mkdir(cache_path)
         return cache_path
