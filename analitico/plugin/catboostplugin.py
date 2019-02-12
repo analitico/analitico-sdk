@@ -136,7 +136,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             tail = self.get_attribute("parameters.tail", 0)
             if tail > 0:
                 self.info("tail: %d, cutting training data", tail)
-                training = training.tail(tail).copy()
+                train_df = train_df.tail(tail).copy()
 
             # create test set from training set if not provided
             if not test_df:
@@ -175,6 +175,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
             results["data"]["training_records"] = len(train_df)
             results["data"]["test_records"] = len(test_df)
             results["data"]["dropped_records"] = len(train) - len(train_df) - len(test_df)
+
+            # save some training data for debugging
+            # train_df.tail(500).to_json("/home/xxx/xxx.json", orient="records")
 
             # split data and labels
             train_labels = train_df[label]
