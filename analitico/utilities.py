@@ -137,3 +137,14 @@ def pd_timediff_min(df, column_start, column_end, column_diff):
     pd_cast_datetime(df, column_end)
     df[column_diff] = df[column_end] - df[column_start]
     df[column_diff] = df[column_diff].dt.total_seconds() / 60.0
+
+
+##
+## CSV
+##
+
+
+def get_csv_row_count(filename):
+    """ Returns the number of rows in the given csv file (one row is deducted for the header) """
+    with open(filename, "r") as f:
+        return sum(1 for row in f) - 1

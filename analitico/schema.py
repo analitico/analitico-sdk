@@ -31,6 +31,7 @@ ANALITICO_TYPE_DATETIME = "datetime"
 ANALITICO_TYPE_TIMESPAN = "timespan"
 ANALITICO_TYPE_CATEGORY = "category"
 
+
 def analitico_to_pandas_type(type: str):
     """ Converts an analitico data type to the equivalent dtype string for pandas dataframes """
     try:
