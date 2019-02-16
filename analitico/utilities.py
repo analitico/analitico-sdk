@@ -34,6 +34,11 @@ def read_json(filename, encoding="utf-8"):
         raise Exception(detail, exc)
 
 
+def save_text(text, filename):
+    with open(filename, "w") as text_file:
+        text_file.write(text)
+
+
 ##
 ## Time utilities
 ##
