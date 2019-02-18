@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 # Design patterns:
 # https://github.com/faif/python-patterns
 
+import analitico
 from analitico.mixin import AttributeMixin
 from analitico.utilities import time_ms, save_json, read_json
 from analitico.schema import apply_schema
@@ -102,7 +103,7 @@ class IPluginManager(ABC, AttributeMixin):
         """
         # temporarily while all internal urls are updated to analitico://
         if url.startswith("workspaces/ws_"):
-            url = ANALITICO_PREFIX + url
+            url = analitico.ANALITICO_URL_PREFIX + url
 
         # see if assets uses analitico://workspaces/... scheme
         if url.startswith("analitico://"):
