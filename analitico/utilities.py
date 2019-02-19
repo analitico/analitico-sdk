@@ -9,12 +9,12 @@ import logging
 import socket
 import platform
 import multiprocessing
-import psutil
 import datetime
+import psutil
 
 from datetime import datetime, date
 
-try:
+try: 
     import distro
     import GPUtil
 except:
@@ -42,17 +42,19 @@ def get_runtime():
         "platform": {"system": platform.system(), "version": platform.version()},
         "python": {"version": platform.python_version(), "implementation": platform.python_implementation()},
         "hardware": {
-            "cpu": {"type": platform.processor(), "count": multiprocessing.cpu_count(), "freq": psutil.cpu_freq()[2]},
+            "cpu": {"type": platform.processor(), "count": multiprocessing.cpu_count(), "freq": int(psutil.cpu_freq()[2])},
             "memory": {
                 "available_mb": int(memory.available / MB),
                 "used_mb": int(memory.used / MB),
                 "total_mb": int(memory.total / MB),
                 "swap_mb": int(swap.total / MB),
-                "swap_perc": swap.percent,
+                "swap_perc": round(swap.percent, 2),
             },
         },
-        "uptime": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "uptime_hours": uptime,
+        "uptime": {
+            "since": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "hours": round(uptime, 2),
+        }
     }
     try:
         # optional package
@@ -63,8 +65,23 @@ def get_runtime():
     try:
         # optional package
         GPUs = GPUtil.getGPUs()
-        print(GPUs)
-    except Exception as exc:
+        if GPUs:
+            runtime["hardware"]["gpu"] = []
+            for GPU in GPUs:
+                runtime["hardware"]["gpu"].append({
+                    "uuid": GPU.uuid,
+                    "name": GPU.name,
+                    "driver": GPU.driver,
+                    "temperature": int(GPU.temperature),
+                    "load": round(GPU.load, 2),
+                    "memory": {
+                        "available_ms": int(GPU.memoryFree),
+                        "used_mb": int(GPU.memoryUsed),
+                        "used_perc": round(GPU.memoryUtil, 2),
+                        "total_mb": int(GPU.memoryTotal)
+                    }
+                })
+    except Exception:
         pass
     return runtime
 
