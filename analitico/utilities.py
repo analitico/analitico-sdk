@@ -14,7 +14,7 @@ import psutil
 
 from datetime import datetime, date
 
-try: 
+try:
     import distro
     import GPUtil
 except:
@@ -34,6 +34,7 @@ def get_runtime():
     """ Collect information on runtime environment, platform, python, hardware, etc """
     memory = psutil.virtual_memory()
     swap = psutil.swap_memory()
+    disk = psutil.disk_usage("/")
     boot_time = datetime.fromtimestamp(psutil.boot_time())
     uptime = (datetime.now() - boot_time).total_seconds() / 3600
     runtime = {
@@ -42,19 +43,27 @@ def get_runtime():
         "platform": {"system": platform.system(), "version": platform.version()},
         "python": {"version": platform.python_version(), "implementation": platform.python_implementation()},
         "hardware": {
-            "cpu": {"type": platform.processor(), "count": multiprocessing.cpu_count(), "freq": int(psutil.cpu_freq()[2])},
+            "cpu": {
+                "type": platform.processor(),
+                "count": multiprocessing.cpu_count(),
+                "freq": int(psutil.cpu_freq()[2]),
+            },
+            "gpu": [],
             "memory": {
+                "total_mb": int(memory.total / MB),
                 "available_mb": int(memory.available / MB),
                 "used_mb": int(memory.used / MB),
-                "total_mb": int(memory.total / MB),
                 "swap_mb": int(swap.total / MB),
                 "swap_perc": round(swap.percent, 2),
             },
+            "disk": {
+                "total_mb": int(disk.total / MB),
+                "available_mb": int(disk.free / MB),
+                "used_mb": int(disk.used / MB),
+                "used_perc": round(disk.percent, 2),
+            },
         },
-        "uptime": {
-            "since": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "hours": round(uptime, 2),
-        }
+        "uptime": {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)},
     }
     try:
         # optional package
@@ -66,21 +75,22 @@ def get_runtime():
         # optional package
         GPUs = GPUtil.getGPUs()
         if GPUs:
-            runtime["hardware"]["gpu"] = []
             for GPU in GPUs:
-                runtime["hardware"]["gpu"].append({
-                    "uuid": GPU.uuid,
-                    "name": GPU.name,
-                    "driver": GPU.driver,
-                    "temperature": int(GPU.temperature),
-                    "load": round(GPU.load, 2),
-                    "memory": {
-                        "available_ms": int(GPU.memoryFree),
-                        "used_mb": int(GPU.memoryUsed),
-                        "used_perc": round(GPU.memoryUtil, 2),
-                        "total_mb": int(GPU.memoryTotal)
+                runtime["hardware"]["gpu"].append(
+                    {
+                        "uuid": GPU.uuid,
+                        "name": GPU.name,
+                        "driver": GPU.driver,
+                        "temperature": int(GPU.temperature),
+                        "load": round(GPU.load, 2),
+                        "memory": {
+                            "total_mb": int(GPU.memoryTotal),
+                            "available_ms": int(GPU.memoryFree),
+                            "used_mb": int(GPU.memoryUsed),
+                            "used_perc": round(GPU.memoryUtil, 2),
+                        },
                     }
-                })
+                )
     except Exception:
         pass
     return runtime
