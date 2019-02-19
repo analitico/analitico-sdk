@@ -9,9 +9,16 @@ import logging
 import socket
 import platform
 import multiprocessing
-import distro
+import psutil
+import datetime
 
-from datetime import datetime
+from datetime import datetime, date
+
+try:
+    import distro
+    import GPUtil
+except:
+    pass
 
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
@@ -20,19 +27,44 @@ logger = logging.getLogger("analitico")
 ## Runtime
 ##
 
+MB = 1024 * 1024
+
 
 def get_runtime():
+    """ Collect information on runtime environment, platform, python, hardware, etc """
+    memory = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    uptime = (datetime.now() - boot_time).total_seconds() / 3600
     runtime = {
         "hostname": socket.gethostname(),
         "ip": socket.gethostbyname(socket.gethostname()),
         "platform": {"system": platform.system(), "version": platform.version()},
         "python": {"version": platform.python_version(), "implementation": platform.python_implementation()},
-        "hardware": {"cpu": platform.processor(), "cpu_count": multiprocessing.cpu_count()},
+        "hardware": {
+            "cpu": {"type": platform.processor(), "count": multiprocessing.cpu_count(), "freq": psutil.cpu_freq()[2]},
+            "memory": {
+                "available_mb": int(memory.available / MB),
+                "used_mb": int(memory.used / MB),
+                "total_mb": int(memory.total / MB),
+                "swap_mb": int(swap.total / MB),
+                "swap_perc": swap.percent,
+            },
+        },
+        "uptime": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "uptime_hours": uptime,
     }
     try:
+        # optional package
         runtime["platform"]["name"] = distro.name()
         runtime["platform"]["version"] = distro.version()
     except:
+        pass
+    try:
+        # optional package
+        GPUs = GPUtil.getGPUs()
+        print(GPUs)
+    except Exception as exc:
         pass
     return runtime
 
