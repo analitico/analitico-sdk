@@ -6,11 +6,36 @@ import numpy as np
 import pandas as pd
 import json
 import logging
+import socket
+import platform
+import multiprocessing
+import distro
 
 from datetime import datetime
 
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
+
+##
+## Runtime
+##
+
+
+def get_runtime():
+    runtime = {
+        "hostname": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname()),
+        "platform": {"system": platform.system(), "version": platform.version()},
+        "python": {"version": platform.python_version(), "implementation": platform.python_implementation()},
+        "hardware": {"cpu": platform.processor(), "cpu_count": multiprocessing.cpu_count()},
+    }
+    try:
+        runtime["platform"]["name"] = distro.name()
+        runtime["platform"]["version"] = distro.version()
+    except:
+        pass
+    return runtime
+
 
 ##
 ## Json utilities
