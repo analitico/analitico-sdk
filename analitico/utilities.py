@@ -119,7 +119,7 @@ def get_runtime():
             pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
         if commit_sha:
-            runtime["github"]["sha"] = commit_sha,
+            runtime["github"]["commit"] = commit_sha,
             runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha,
     except Exception as exc:
         runtime["exception"] = str(exc)
