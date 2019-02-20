@@ -11,6 +11,7 @@ import platform
 import multiprocessing
 import psutil
 import collections
+import subprocess
 
 from datetime import datetime
 
@@ -76,7 +77,6 @@ def get_runtime():
 
         hardware = collections.OrderedDict()
         runtime["hardware"] = hardware
-
         hardware["cpu"] = {"type": platform.processor(), "count": multiprocessing.cpu_count()}
         try:
             # will raise exception on virtual machines
@@ -113,14 +113,13 @@ def get_runtime():
         # production servers have an environment variable indicating git commit
         runtime["github"] = {}
         try:
-            import subprocess
             runtime["github"]["version"] = subprocess.check_output(["git", "describe"]).strip()
         except:
             pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
         if commit_sha:
-            runtime["github"]["commit"] = commit_sha,
-            runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha,
+            runtime["github"]["commit"] = commit_sha
+            runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha
     except Exception as exc:
         runtime["exception"] = str(exc)
     return runtime
