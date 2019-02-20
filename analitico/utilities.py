@@ -79,8 +79,12 @@ def get_runtime():
         hardware["cpu"] = {
             "type": platform.processor(),
             "count": multiprocessing.cpu_count(),
-            "freq": int(psutil.cpu_freq()[2]),
         }
+        try:
+            # will raise exception on virtual machines
+            hardware["cpu"]["freq"] = int(psutil.cpu_freq()[2])
+        except:
+            pass
 
         gpu = get_gpu_runtime()
         if gpu:
