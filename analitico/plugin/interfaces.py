@@ -20,8 +20,9 @@ from abc import ABC, abstractmethod
 # https://github.com/faif/python-patterns
 
 import analitico
+
 from analitico.mixin import AttributeMixin
-from analitico.ifactory import IFactory
+from analitico.interfaces import IFactory
 from analitico.utilities import time_ms, save_json, read_json
 from analitico.schema import apply_schema
 

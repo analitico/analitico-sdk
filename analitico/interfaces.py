@@ -1,8 +1,6 @@
 from abc import abstractmethod
 
-from analitico.mixin import AttributeMixin
-
-import analitico
+from .mixin import AttributeMixin
 
 
 class IFactory(AttributeMixin):
@@ -16,7 +14,7 @@ class IFactory(AttributeMixin):
     @property
     def endpoint(self):
         """ Endpoint used to call analitico APIs """
-        return self.get_attribute("endpoint", analitico.ANALITICO_API_ENDPOINT)
+        return self.get_attribute("endpoint")
 
     @property
     def request(self):
@@ -72,7 +70,7 @@ class IFactory(AttributeMixin):
     ##
 
     @abstractmethod
-    def get_plugin(self, name: str, **kwargs):
+    def get_plugin(self, name: str, scope=None, **kwargs):
         """ A factory method that creates a plugin from its name and settings (builder pattern) """
         pass
 
@@ -103,14 +101,14 @@ class IFactory(AttributeMixin):
         """ A logger that should be used for tracing """
         pass
 
-    def info(self, format, *args, **kwargs):
-        self.logger.info(format, *args, **kwargs)
+    def info(self, msg, *args, **kwargs):
+        self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, format, *args, **kwargs):
-        self.logger.warning(format, *args, **kwargs)
+    def warning(self, msg, *args, **kwargs):
+        self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, format, *args, **kwargs):
-        self.logger.error(format, *args, **kwargs)
+    def error(self, msg, *args, **kwargs):
+        self.logger.error(msg, *args, **kwargs)
 
     ##
     ## with xxx as: lifecycle methods

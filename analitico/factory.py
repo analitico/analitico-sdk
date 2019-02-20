@@ -1,17 +1,15 @@
 import tempfile
 import shutil
 import os.path
-import urllib.parse
 import requests
 import json
 import re
 
-from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 
 import analitico.utilities
-from analitico.ifactory import IFactory
-from analitico.mixin import AttributeMixin
+
+from analitico.interfaces import IFactory
 from analitico.plugin import PluginError
 from analitico.dataset import Dataset
 
@@ -31,8 +29,8 @@ class Factory(IFactory):
     # APIs endpoint, eg: https://analitico.ai/api/
     endpoint = None
 
-    def __init__(self, token=None, endpoint=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, token=None, endpoint=None, **kwargs):
+        super().__init__(**kwargs)
         if token:
             assert token.startswith("tok_")
             self.token = token
@@ -103,7 +101,7 @@ class Factory(IFactory):
         url = self.get_url(url)
         try:
             url_parse = urlparse(url)
-        except Exception as exc:
+        except Exception:
             pass
         if url_parse and url_parse.scheme in ("http", "https"):
             headers = {}
@@ -127,7 +125,7 @@ class Factory(IFactory):
     ## Plugins
     ##
 
-    def _get_class_from_fully_qualified_name(self, name, module=None, globals=globals()):
+    def _get_class_from_fully_qualified_name(self, name, module=None, scope=globals()):
         """ Gets a class from its fully qualified name, eg: package.module.Class """
         assert name and isinstance(name, str)
         try:
@@ -136,14 +134,14 @@ class Factory(IFactory):
                 if len(split) > 1:
                     prefix = split[0]
                     name = name[len(split[0]) + 1 :]
-                    module = getattr(module, prefix) if module else globals[prefix]
+                    module = getattr(module, prefix) if module else scope[prefix]
                     return self._get_class_from_fully_qualified_name(name, module)
                 return getattr(module, split[0])
-        except Exception as exc:
+        except Exception:
             pass
         return None
 
-    def get_plugin(self, name: str, globals=globals(), **kwargs):
+    def get_plugin(self, name: str, scope=globals(), **kwargs):
         """
         Create a plugin given its name and the environment it will run in.
         Any additional parameters passed to this method will be passed to the
@@ -151,7 +149,7 @@ class Factory(IFactory):
         """
         try:
             assert name and isinstance(name, str)
-            klass = self._get_class_from_fully_qualified_name(name, globals=globals)
+            klass = self._get_class_from_fully_qualified_name(name, scope=scope)
             if not klass:
                 raise analitico.plugin.PluginError("Factory - can't find plugin: " + name)
             return (klass)(factory=self, **kwargs)
@@ -164,7 +162,7 @@ class Factory(IFactory):
     ## Factory methods
     ##
 
-    EMAIL_RE = "[^@]+@[^@]+\.[^@]+"  # very rough check
+    EMAIL_RE = r"[^@]+@[^@]+\.[^@]+"  # very rough check
 
     def get_item_type(self, item_id):
         """ Returns item class from item id, eg: returns 'dataset' from ds_xxx """
@@ -192,7 +190,6 @@ class Factory(IFactory):
         url = "{}/{}s/{}".format(self.endpoint, self.get_item_type(item_id), item_id)
         return self.get_url_json(url)
 
-    @abstractmethod
     def get_dataset(self, dataset_id):
         """ Creates a Dataset object from the cloud dataset with the given id """
         plugin_settings = {

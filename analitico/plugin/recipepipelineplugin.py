@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import os.path
 
-from .plugin import PluginError
+from .interfaces import PluginError
 from .pipelineplugin import PipelinePlugin
 
 ##

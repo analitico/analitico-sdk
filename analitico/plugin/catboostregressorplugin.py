@@ -17,7 +17,7 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 from analitico.utilities import get_dict_dot, time_ms, save_json
 from analitico.schema import analitico_to_pandas_type
 
-from .plugin import IAlgorithmPlugin, PluginError
+from .interfaces import IAlgorithmPlugin, PluginError
 from .catboostplugin import CatBoostPlugin
 
 

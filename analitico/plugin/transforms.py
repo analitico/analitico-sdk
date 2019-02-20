@@ -1,9 +1,6 @@
-"""
-Plugins that process, analize and alter dataframes
-"""
-
 import pandas
-from .plugin import IDataframePlugin, PluginError
+
+from .interfaces import IDataframePlugin, PluginError
 
 ##
 ## CodeDataframePlugin

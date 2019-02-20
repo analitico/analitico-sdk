@@ -1,12 +1,12 @@
 # plugin base classes
-from .plugin import IPlugin  # NOQA: F401
-from .plugin import IDataframeSourcePlugin  # NOQA: F401
-from .plugin import IDataframePlugin  # NOQA: F401
-from .plugin import IAlgorithmPlugin  # NOQA: F401
-from .plugin import IGroupPlugin  # NOQA: F401
+from .interfaces import IPlugin  # NOQA: F401
+from .interfaces import IDataframeSourcePlugin  # NOQA: F401
+from .interfaces import IDataframePlugin  # NOQA: F401
+from .interfaces import IAlgorithmPlugin  # NOQA: F401
+from .interfaces import IGroupPlugin  # NOQA: F401
 
 # plugins use the same specialized class for exceptions
-from .plugin import PluginError  # NOQA: F401
+from .interfaces import PluginError  # NOQA: F401
 
 # plugins to generate dataframes from sources
 from .csvdataframesourceplugin import CsvDataframeSourcePlugin

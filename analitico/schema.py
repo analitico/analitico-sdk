@@ -1,14 +1,7 @@
 """ Utility methods to convert between pandas and analitico's schemas """
 
-import time
 import numpy as np
 import pandas as pd
-import json
-import logging
-import holidays
-
-from catboost import Pool
-from datetime import datetime
 
 ##
 ## Schema
@@ -32,7 +25,7 @@ ANALITICO_TYPE_TIMESPAN = "timespan"
 ANALITICO_TYPE_CATEGORY = "category"
 
 
-def analitico_to_pandas_type(type: str):
+def analitico_to_pandas_type(data_type: str):
     """ Converts an analitico data type to the equivalent dtype string for pandas dataframes """
     try:
         ANALITICO_TO_PANDAS_TYPES = {
@@ -44,28 +37,28 @@ def analitico_to_pandas_type(type: str):
             ANALITICO_TYPE_TIMESPAN: PD_TYPE_TIMESPAN,
             ANALITICO_TYPE_CATEGORY: PD_TYPE_CATEGORY,
         }
-        return ANALITICO_TO_PANDAS_TYPES[type]
+        return ANALITICO_TO_PANDAS_TYPES[data_type]
     except KeyError as exc:
-        raise KeyError("analitico_to_pandas_type - unknown type: " + type, exc)
+        raise KeyError("analitico_to_pandas_type - unknown type: " + data_type, exc)
 
 
-def pandas_to_analitico_type(dtype):
+def pandas_to_analitico_type(data_type):
     """ Return the analitico schema data type of a pandas dtype """
-    if dtype == "int":
+    if data_type == "int":
         return "integer"
-    if dtype == "float":
+    if data_type == "float":
         return "float"
-    if dtype == "bool":
+    if data_type == "bool":
         return "boolean"
-    if dtype.name == "category":
+    if data_type.name == "category":
         return "category"  # dtype alone doesn't ==
-    if dtype == "object":
+    if data_type == "object":
         return "string"
-    if dtype == "datetime64[ns]":
+    if data_type == "datetime64[ns]":
         return "datetime"
-    if dtype == "timedelta64[ns]":
+    if data_type == "timedelta64[ns]":
         return "timespan"
-    raise KeyError("_pandas_to_analitico_type - unknown dtype: " + str(dtype))
+    raise KeyError("_pandas_to_analitico_type - unknown data_type: " + str(data_type))
 
 
 def generate_schema(df: pd.DataFrame) -> dict:

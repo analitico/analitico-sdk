@@ -5,7 +5,7 @@ import os.path
 
 from analitico.utilities import read_json, get_dict_dot
 
-from .plugin import PluginError
+from .interfaces import PluginError
 from .pipelineplugin import PipelinePlugin
 
 ##

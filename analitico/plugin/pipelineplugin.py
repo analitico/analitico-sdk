@@ -4,7 +4,7 @@ ETL (extract, transform, load) pipeline or a graph used to
 process data and create a machine learning model.
 """
 
-from .plugin import IGroupPlugin
+from .interfaces import IGroupPlugin
 
 ##
 ## PipelinePlugin

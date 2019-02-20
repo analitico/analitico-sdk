@@ -2,22 +2,20 @@
 # Copyright (C) 2018 by Analitico.ai. All rights reserved.
 
 import time
-import numpy as np
 import pandas as pd
 import json
 import logging
 import socket
 import platform
 import multiprocessing
-import datetime
 import psutil
 
-from datetime import datetime, date
+from datetime import datetime
 
 try:
     import distro
     import GPUtil
-except:
+except Exception:
     pass
 
 # default logger for analitico's libraries
@@ -69,7 +67,7 @@ def get_runtime():
         # optional package
         runtime["platform"]["name"] = distro.name()
         runtime["platform"]["version"] = distro.version()
-    except:
+    except Exception:
         pass
     try:
         # optional package

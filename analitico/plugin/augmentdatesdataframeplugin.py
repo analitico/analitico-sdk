@@ -3,7 +3,7 @@ import pandas as pd
 import analitico.utilities
 import analitico.schema
 
-from .plugin import IDataframePlugin
+from .interfaces import IDataframePlugin
 
 ##
 ## AugmentDatesDataframePlugin - dataframe in, dataframe out with better dates

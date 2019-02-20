@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 
-from .plugin import IAlgorithmPlugin, PluginError
+from .interfaces import IAlgorithmPlugin, PluginError
 from .catboostplugin import CatBoostPlugin
 
 ##

@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 import analitico.mixin
 import analitico.plugin
@@ -12,10 +11,10 @@ import analitico.plugin
 class Dataset(analitico.mixin.AttributeMixin):
     """ A dataset can retrieve data from a source and process it through a pipeline to generate a dataframe """
 
-    plugin: analitico.plugin.IPlugin = None
+    plugin = None
 
-    def __init__(self, factory=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, factory=None, **kwargs):
+        super().__init__(**kwargs)
         if "plugin" in kwargs:
             if not factory:
                 raise analitico.plugin.PluginError(
