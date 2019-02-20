@@ -111,12 +111,16 @@ def get_runtime():
         runtime["uptime"] = {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)}
 
         # production servers have an environment variable indicating git commit
+        runtime["github"] = {}
+        try:
+            import subprocess
+            runtime["github"]["version"] = subprocess.check_output(["git", "describe"]).strip()
+        except:
+            pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
         if commit_sha:
-            runtime["github"] = {
-                "commit_sha": commit_sha,
-                "commit_url": "https://github.com/analitico/analitico/commit/" + commit_sha,
-            }
+            runtime["github"]["sha"] = commit_sha,
+            runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha,
     except Exception as exc:
         runtime["exception"] = str(exc)
     return runtime
