@@ -9,6 +9,7 @@ import socket
 import platform
 import multiprocessing
 import psutil
+import collections
 
 from datetime import datetime
 
@@ -28,53 +29,15 @@ logger = logging.getLogger("analitico")
 MB = 1024 * 1024
 
 
-def get_runtime():
-    """ Collect information on runtime environment, platform, python, hardware, etc """
-    memory = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    disk = psutil.disk_usage("/")
-    boot_time = datetime.fromtimestamp(psutil.boot_time())
-    uptime = (datetime.now() - boot_time).total_seconds() / 3600
-    runtime = {
-        "hostname": socket.gethostname(),
-        "ip": socket.gethostbyname(socket.gethostname()),
-        "platform": {"system": platform.system(), "version": platform.version()},
-        "python": {"version": platform.python_version(), "implementation": platform.python_implementation()},
-        "hardware": {
-            "cpu": {
-                "type": platform.processor(),
-                "count": multiprocessing.cpu_count(),
-                "freq": int(psutil.cpu_freq()[2]),
-            },
-            "gpu": [],
-            "memory": {
-                "total_mb": int(memory.total / MB),
-                "available_mb": int(memory.available / MB),
-                "used_mb": int(memory.used / MB),
-                "swap_mb": int(swap.total / MB),
-                "swap_perc": round(swap.percent, 2),
-            },
-            "disk": {
-                "total_mb": int(disk.total / MB),
-                "available_mb": int(disk.free / MB),
-                "used_mb": int(disk.used / MB),
-                "used_perc": round(disk.percent, 2),
-            },
-        },
-        "uptime": {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)},
-    }
+def get_gpu_runtime():
+    """ Returns array of GPU specs (if discoverable) """
     try:
-        # optional package
-        runtime["platform"]["name"] = distro.name()
-        runtime["platform"]["version"] = distro.version()
-    except Exception:
-        pass
-    try:
+        runtime = []
         # optional package
         GPUs = GPUtil.getGPUs()
         if GPUs:
             for GPU in GPUs:
-                runtime["hardware"]["gpu"].append(
+                runtime.append(
                     {
                         "uuid": GPU.uuid,
                         "name": GPU.name,
@@ -90,7 +53,62 @@ def get_runtime():
                     }
                 )
     except Exception:
-        pass
+        return None
+    return runtime
+
+
+def get_runtime():
+    """ Collect information on runtime environment, platform, python, hardware, etc """
+    runtime = collections.OrderedDict()
+    try:
+        runtime["hostname"] = socket.gethostname()
+        runtime["ip"] = socket.gethostbyname(socket.gethostname())
+        runtime["platform"] = {"system": platform.system(), "version": platform.version()}
+        try:
+            # optional package
+            runtime["platform"]["name"] = distro.name()
+            runtime["platform"]["version"] = distro.version()
+        except Exception:
+            pass
+
+        runtime["python"] = {"version": platform.python_version(), "implementation": platform.python_implementation()}
+
+        hardware = collections.OrderedDict()
+        runtime["hardware"] = hardware
+
+        hardware["cpu"] = {
+            "type": platform.processor(),
+            "count": multiprocessing.cpu_count(),
+            "freq": int(psutil.cpu_freq()[2]),
+        }
+
+        gpu = get_gpu_runtime()
+        if gpu:
+            hardware["gpu"] = gpu
+
+        memory = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        hardware["memory"] = {
+            "total_mb": int(memory.total / MB),
+            "available_mb": int(memory.available / MB),
+            "used_mb": int(memory.used / MB),
+            "swap_mb": int(swap.total / MB),
+            "swap_perc": round(swap.percent, 2),
+        }
+
+        disk = psutil.disk_usage("/")
+        hardware["disk"] = {
+            "total_mb": int(disk.total / MB),
+            "available_mb": int(disk.free / MB),
+            "used_mb": int(disk.used / MB),
+            "used_perc": round(disk.percent, 2),
+        }
+
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime = (datetime.now() - boot_time).total_seconds() / 3600
+        runtime["uptime"] = {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)}
+    except Exception as exc:
+        runtime["exception"] = str(exc)
     return runtime
 
 
