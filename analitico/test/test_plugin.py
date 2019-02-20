@@ -4,15 +4,12 @@ import os.path
 
 import pandas as pd
 
-import analitico.plugin
-import analitico.utilities
-
 from analitico.plugin import PluginError, PLUGIN_TYPE
 from analitico.plugin import CsvDataframeSourcePlugin, CSV_DATAFRAME_SOURCE_PLUGIN
 from analitico.plugin import CODE_DATAFRAME_PLUGIN
 from analitico.plugin import PipelinePlugin, PIPELINE_PLUGIN
 
-from .testmixin import TestMixin
+from .test_mixin import TestMixin
 
 # pylint: disable=no-member
 
@@ -71,11 +68,11 @@ class PluginTests(unittest.TestCase, TestMixin):
         plugin = self.factory.get_plugin(CODE_DATAFRAME_PLUGIN, code=code)
 
         # dataframe passed as POSITIONAL parameter
-        df = plugin.run("dataset/process", df)
+        df = plugin.run(df, action="dataset/process")
         self.assertEqual(df.loc[0, "First"], 12)
 
         # dataframe passed as POSITIONAL parameter
-        df = plugin.run("dataset/process", df)
+        df = plugin.run(df, action="dataset/process")
         self.assertEqual(df.loc[0, "First"], 14)
 
     def test_plugin_code_dataframe_bug(self):
@@ -91,7 +88,7 @@ class PluginTests(unittest.TestCase, TestMixin):
         plugin = self.factory.get_plugin(CODE_DATAFRAME_PLUGIN, code=code)
 
         with self.assertRaises(PluginError):
-            df = plugin.run("dataset/process", df)
+            df = plugin.run(df, actions="dataset/process")
 
     def test_plugin_pipeline(self):
         """ Test grouping plugins into a multi step pipeline to retrieve and process a dataframe """

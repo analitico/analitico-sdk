@@ -2,10 +2,9 @@ import unittest
 
 import pandas as pd
 
-from analitico.dataset import Dataset
 from analitico.schema import generate_schema
 
-from .testmixin import TestMixin
+from .test_mixin import TestMixin
 
 # pylint: disable=no-member
 

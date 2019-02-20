@@ -97,7 +97,7 @@ class IDataframeSourcePlugin(IPlugin):
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
     @abstractmethod
-    def run(self, action=None, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         """ Run creates a dataset from the source and returns it """
         pass
 
@@ -117,7 +117,7 @@ class IDataframePlugin(IPlugin):
         inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
-    def run(self, action=None, *args, **kwargs) -> pandas.DataFrame:
+    def run(self, *args, action=None, **kwargs) -> pandas.DataFrame:
         assert isinstance(args[0], pandas.DataFrame)
         return args[0]
 
@@ -200,7 +200,7 @@ class IAlgorithmPlugin(IPlugin):
         results["performance"]["total_ms"] = time_ms(started_on)
         return results
 
-    def run(self, action, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         """ Algorithm can run to train a model or to predict from a trained model """
         if action.endswith("/train"):
             return self._run_train(*args, **kwargs)

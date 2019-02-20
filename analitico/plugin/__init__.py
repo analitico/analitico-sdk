@@ -4,8 +4,6 @@ from .interfaces import IDataframeSourcePlugin  # NOQA: F401
 from .interfaces import IDataframePlugin  # NOQA: F401
 from .interfaces import IAlgorithmPlugin  # NOQA: F401
 from .interfaces import IGroupPlugin  # NOQA: F401
-
-# plugins use the same specialized class for exceptions
 from .interfaces import PluginError  # NOQA: F401
 
 # plugins to generate dataframes from sources

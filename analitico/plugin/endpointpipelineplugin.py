@@ -25,7 +25,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
         inputs = [{"data": "pandas.DataFrame"}]
         outputs = [{"predictions": "pandas.DataFrame"}]
 
-    def run(self, action=None, *args, **kwargs):
+    def run(self, *args, **kwargs):
         """ Process the plugins in sequence to run predictions """
         try:
             assert isinstance(args[0], pd.DataFrame)
@@ -43,7 +43,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
                 self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
 
             # run the pipeline, return predictions
-            predictions = super().run(action, data_df, *args, **kwargs)
+            predictions = super().run(data_df, **kwargs)
             return predictions
 
         except Exception as exc:

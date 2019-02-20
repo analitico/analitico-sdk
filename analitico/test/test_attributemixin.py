@@ -25,7 +25,7 @@ class MyClass3(analitico.mixin.AttributeMixin):
 
     mickey = "empty"
 
-    def __init__(self, mickey, *args, **kwargs):
+    def __init__(self, mickey, **kwargs):
         # here we don't call super().__init__ and loose all attributes but mickey's
         self.mickey = mickey
 
@@ -46,7 +46,7 @@ class AttributesMixinTests(unittest.TestCase):
         obj1 = MyClass1(mickey="smart", goofy="funny", minnie="cute")
 
         with self.assertRaises(AttributeError):
-            var1 = obj1.pinocchio
+            obj1.pinocchio
 
     def test_mixin_attributes_init_passthrough(self):
         """ Basic passthrough initialization of AttributeMixin """
@@ -58,7 +58,7 @@ class AttributesMixinTests(unittest.TestCase):
 
         # bogus attribute not defined
         with self.assertRaises(AttributeError):
-            var1 = obj1.pinocchio
+            obj1.pinocchio
 
     def test_mixin_attributes_init_no_passthrough(self):
         """ Basic passthrough initialization of AttributeMixin """
@@ -73,4 +73,4 @@ class AttributesMixinTests(unittest.TestCase):
 
         # bogus attribute also not defined
         with self.assertRaises(AttributeError):
-            var1 = obj1.pinocchio
+            obj1.pinocchio
