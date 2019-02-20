@@ -24,7 +24,7 @@ class PipelinePlugin(IGroupPlugin):
     class Meta(IGroupPlugin.Meta):
         name = "analitico.plugin.PipelinePlugin"
 
-    def run(self, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         """ Process plugins in sequence, return combinined chained result """
         for plugin in self.plugins:
             # a plugin can have one or more input parameters and one or more
@@ -34,7 +34,7 @@ class PipelinePlugin(IGroupPlugin):
             # a pipeline of plugins to chain plugins with a variable number of
             # parameters. each plugin is responsible for validating the type of
             # its input positional parameters and named parameters.
-            args = plugin.run(*args, **kwargs)
+            args = plugin.run(*args, action=action, **kwargs)
             if not isinstance(args, tuple):
                 args = (args,)
         return args if len(args) > 1 else args[0]

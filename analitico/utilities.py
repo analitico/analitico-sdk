@@ -77,10 +77,7 @@ def get_runtime():
         hardware = collections.OrderedDict()
         runtime["hardware"] = hardware
 
-        hardware["cpu"] = {
-            "type": platform.processor(),
-            "count": multiprocessing.cpu_count(),
-        }
+        hardware["cpu"] = {"type": platform.processor(), "count": multiprocessing.cpu_count()}
         try:
             # will raise exception on virtual machines
             hardware["cpu"]["freq"] = int(psutil.cpu_freq()[2])
@@ -113,7 +110,7 @@ def get_runtime():
         uptime = (datetime.now() - boot_time).total_seconds() / 3600
         runtime["uptime"] = {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)}
 
-        # production servers have an environment variable indicating git commit 
+        # production servers have an environment variable indicating git commit
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
         if commit_sha:
             runtime["github"] = {

@@ -23,9 +23,9 @@ class RecipePipelinePlugin(PipelinePlugin):
         inputs = None
         outputs = [{"model": "dict"}]
 
-    def run(self, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         """ Process the plugins in sequence to create trained model artifacts """
-        results = super().run(*args, **kwargs)
+        results = super().run(*args, action=action, **kwargs)
         if not isinstance(results, dict):
             msg = "Pipeline didn't produce a dictionary with training results"
             self.error(msg)

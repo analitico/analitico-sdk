@@ -1,11 +1,9 @@
-import analitico.utilities
-import pandas as pd
 import os
 import os.path
+import pandas as pd
 
 from analitico.utilities import read_json, get_dict_dot
 
-from .interfaces import PluginError
 from .pipelineplugin import PipelinePlugin
 
 ##
@@ -25,7 +23,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
         inputs = [{"data": "pandas.DataFrame"}]
         outputs = [{"predictions": "pandas.DataFrame"}]
 
-    def run(self, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         """ Process the plugins in sequence to run predictions """
         try:
             assert isinstance(args[0], pd.DataFrame)
@@ -43,7 +41,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
                 self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
 
             # run the pipeline, return predictions
-            predictions = super().run(data_df, **kwargs)
+            predictions = super().run(data_df, action=action, **kwargs)
             return predictions
 
         except Exception as exc:

@@ -1,25 +1,13 @@
-import logging
 import collections
 import pandas
-import tempfile
 import os.path
-import shutil
-import urllib.request
-import re
-import requests
-import json
-import tempfile
 import multiprocessing
-import urllib.parse
 import os
 
-from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 
 # Design patterns:
 # https://github.com/faif/python-patterns
-
-import analitico
 
 from analitico.mixin import AttributeMixin
 from analitico.interfaces import IFactory
@@ -56,8 +44,8 @@ class IPlugin(ABC, AttributeMixin):
         pass
 
     @abstractmethod
-    def run(self, action=None, *args, **kwargs):
-        """ Run will do in the subclass whatever the plugin does """
+    def run(self, *args, action=None, **kwargs):
+        """ Run will do in the subclass whatever the plugin does, 'action' parameter optional """
         pass
 
     def deactivate(self, *args, **kwargs):
@@ -74,14 +62,14 @@ class IPlugin(ABC, AttributeMixin):
         """ Logger that can be used by the plugin to communicate errors, etc with host """
         return self.factory.logger
 
-    def info(self, format, *args):
-        self.logger.info(format, *args)
+    def info(self, msg, *args):
+        self.logger.info(msg, *args)
 
-    def warning(self, format, *args):
-        self.logger.warning(format, *args)
+    def warning(self, msg, *args):
+        self.logger.warning(msg, *args)
 
-    def error(self, format, *args):
-        self.logger.error(format, *args)
+    def error(self, msg, *args):
+        self.logger.error(msg, *args)
 
 
 ##

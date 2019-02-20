@@ -16,7 +16,7 @@ class AugmentDatesDataframePlugin(IDataframePlugin):
     class Meta(IDataframePlugin.Meta):
         name = "analitico.plugin.AugmentDatesDataframePlugin"
 
-    def run(self, action=None, *args, **kwargs):
+    def run(self, *args, action=None, **kwargs):
         try:
             df = args[0]
             if df is not None and isinstance(df, pd.DataFrame):
