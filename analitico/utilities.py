@@ -1,6 +1,7 @@
 # Utility methods to process dataframes and simplify workflow.
 # Copyright (C) 2018 by Analitico.ai. All rights reserved.
 
+import os
 import time
 import pandas as pd
 import json
@@ -111,6 +112,14 @@ def get_runtime():
         boot_time = datetime.fromtimestamp(psutil.boot_time())
         uptime = (datetime.now() - boot_time).total_seconds() / 3600
         runtime["uptime"] = {"since": boot_time.strftime("%Y-%m-%d %H:%M:%S"), "hours": round(uptime, 2)}
+
+        # production servers have an environment variable indicating git commit 
+        commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
+        if commit_sha:
+            runtime["github"] = {
+                "commit_sha": commit_sha,
+                "commit_url": "https://github.com/analitico/analitico/commit/" + commit_sha,
+            }
     except Exception as exc:
         runtime["exception"] = str(exc)
     return runtime
