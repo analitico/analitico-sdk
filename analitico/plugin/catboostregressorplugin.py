@@ -59,7 +59,7 @@ class CatBoostRegressorPlugin(CatBoostPlugin):
 
         # create model object from stored file
         loading_on = time_ms()
-        model_filename = os.path.join(self.manager.get_artifacts_directory(), "model.cbm")
+        model_filename = os.path.join(self.factory.get_artifacts_directory(), "model.cbm")
         model = self.create_model()
         model.load_model(model_filename)
         results["performance"]["loading_ms"] = time_ms(loading_on)

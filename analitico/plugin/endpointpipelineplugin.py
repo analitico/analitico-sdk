@@ -32,7 +32,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
             data_df = args[0]
 
             # read training information from disk
-            artifacts_path = self.manager.get_artifacts_directory()
+            artifacts_path = self.factory.get_artifacts_directory()
             training_path = os.path.join(artifacts_path, "training.json")
             training = read_json(training_path)
             assert training

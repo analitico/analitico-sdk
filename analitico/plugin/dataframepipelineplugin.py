@@ -32,7 +32,7 @@ class DataframePipelinePlugin(PipelinePlugin):
         # save dataframe as data.csv
         # we will save the index column only if it is named
         # and it was created explicitely
-        artifacts_path = self.manager.get_artifacts_directory()
+        artifacts_path = self.factory.get_artifacts_directory()
         csv_path = os.path.join(artifacts_path, "data.csv")
         index = bool(df.index.name)
         df.to_csv(csv_path, index=index)

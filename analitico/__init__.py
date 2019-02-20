@@ -33,13 +33,15 @@ USER_PREFIX = "id_"  # an identity profile
 WORKSPACE_PREFIX = "ws_"  # workspace with rights and one or more projects and other resources
 
 
+from analitico.ifactory import IFactory
+
 import analitico.utilities
 import analitico.plugin
 import analitico.dataset
 import analitico.mixin
-import analitico.manager
+import analitico.factory
 
 
-def authorize(token=None, endpoint=ANALITICO_STAGING_API_ENDPOINT) -> analitico.plugin.IPluginManager:
-    """ Returns a factory which can create datasets, models, plugins, etc """
-    return analitico.manager.PluginManager(token, endpoint)
+def authorize(token=None, endpoint=ANALITICO_STAGING_API_ENDPOINT) -> IFactory:
+    """ Returns an API factory which can create datasets, models, plugins, etc """
+    return analitico.factory.Factory(token, endpoint)

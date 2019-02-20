@@ -102,7 +102,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
         cols.pop(cols.index(label))
         test_df = test_df[cols + [label]]
         test_df["prediction"] = test_predictions[-100:]  # match sample above
-        artifacts_path = self.manager.get_artifacts_directory()
+        artifacts_path = self.factory.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
 
     def train(self, train, test, results, *args, **kwargs):
@@ -200,7 +200,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             self.score_training(model, test_df, test_pool, test_labels, results)
 
             # save model file and training results
-            artifacts_path = self.manager.get_artifacts_directory()
+            artifacts_path = self.factory.get_artifacts_directory()
             model_path = os.path.join(artifacts_path, "model.cbm")
             model.save_model(model_path)
             results["scores"]["model_size"] = os.path.getsize(model_path)

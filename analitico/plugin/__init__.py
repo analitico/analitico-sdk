@@ -4,7 +4,6 @@ from .plugin import IDataframeSourcePlugin  # NOQA: F401
 from .plugin import IDataframePlugin  # NOQA: F401
 from .plugin import IAlgorithmPlugin  # NOQA: F401
 from .plugin import IGroupPlugin  # NOQA: F401
-from .plugin import IPluginManager  # NOQA: F401
 
 # plugins use the same specialized class for exceptions
 from .plugin import PluginError  # NOQA: F401

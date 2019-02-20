@@ -36,6 +36,6 @@ class RecipePipelinePlugin(PipelinePlugin):
         # training.json, trained models and other artifacts should
         # now be in the artifacts directory. depending on the environment
         # these may be left on disk (SDK) or stored in cloud (APIs)
-        artifacts_path = self.manager.get_artifacts_directory()
+        artifacts_path = self.factory.get_artifacts_directory()
         assert len(os.listdir(artifacts_path)) >= 1
         return results

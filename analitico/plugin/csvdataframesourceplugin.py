@@ -32,7 +32,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
             # no schema was provided but the url is that of an analitico dataset in the cloud
             if not schema and url.startswith("analitico://") and url.endswith("/data/csv"):
                 info_url = url.replace("/data/csv", "/data/info")
-                info = self.manager.get_url_json(info_url)
+                info = self.factory.get_url_json(info_url)
                 schema = get_dict_dot(info, "data.schema")
 
             # array of types for each column in the source
@@ -59,7 +59,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
                     if column.get("index", False):
                         index = column["name"]
 
-            stream = self.manager.get_url_stream(url)
+            stream = self.factory.get_url_stream(url)
             df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates)
 
             if index:
