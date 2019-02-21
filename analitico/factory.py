@@ -91,7 +91,7 @@ class Factory(IFactory):
             url = self.endpoint + url[len("analitico://") :]
         return url
 
-    def get_url_stream(self, url):
+    def get_url_stream(self, url, binary=False):
         """
         Returns a stream to the given url. This works for regular http:// or https://
         and also works for analitico:// assets which are converted to calls to the given
@@ -109,8 +109,26 @@ class Factory(IFactory):
                 # if url is connecting to analitico.ai add token
                 headers = {"Authorization": "Bearer " + self.token}
             response = requests.get(url, stream=True, headers=headers)
-            return response.raw
-        return open(url, "rb")
+
+            # TODO could cache here if md5 is provided?
+
+            if binary:
+                tf = tempfile.NamedTemporaryFile(mode='wb')
+                for chunk in response.iter_content(chunk_size=128*1024):
+                    tf.write(chunk)
+                tf.seek(0)
+                return tf.file           
+            else:
+                tf = tempfile.NamedTemporaryFile(mode='w+t', encoding="utf-8", prefix="analitico_t_")
+                if response.encoding is None:
+                    response.encoding = 'utf-8'
+                for chunk in response.iter_lines(decode_unicode=True):
+                    tf.write(chunk + "\n")
+                tf.seek(0)
+                return tf           
+
+        mode = "rb" if binary else "rt"
+        return open(url, mode)
 
     def get_url_json(self, url):
         assert url and isinstance(url, str)

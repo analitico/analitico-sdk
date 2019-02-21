@@ -52,7 +52,7 @@ class IFactory(AttributeMixin):
     ##
 
     @abstractmethod
-    def get_url_stream(self, url):
+    def get_url_stream(self, url, binary=False):
         """
         Returns a stream to the given url. This works for regular http:// or https://
         and also works for analitico:// assets which are converted to calls to the given
