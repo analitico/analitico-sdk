@@ -13,6 +13,8 @@ import psutil
 import collections
 import subprocess
 import sys
+import random
+import string
 
 from django.conf import settings
 from datetime import datetime
@@ -25,6 +27,15 @@ except Exception:
 
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
+
+##
+## Crypto
+##
+
+
+def id_generator(size=9, chars=string.ascii_letters + string.digits):
+    return "".join(random.choice(chars) for _ in range(size))
+
 
 ##
 ## Runtime

@@ -47,6 +47,11 @@ class IFactory(AttributeMixin):
         """ Returns directory to be used for caches """
         pass
 
+    @abstractmethod
+    def get_cache_filename(self, unique_id):
+        """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
+        pass
+
     ##
     ## URL retrieval, authorization and caching
     ##

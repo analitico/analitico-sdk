@@ -4,14 +4,17 @@ import os.path
 import requests
 import json
 import re
+import hashlib
 
 from urllib.parse import urlparse
+from io import BytesIO, StringIO
 
 import analitico.utilities
 
 from analitico.interfaces import IFactory
 from analitico.plugin import PluginError
 from analitico.dataset import Dataset
+from analitico.utilities import id_generator
 
 # We need to import this library here even though we don't
 # use it directly below because we are instantiating the
@@ -72,24 +75,18 @@ class Factory(IFactory):
     # regular expression used to detect assets using analitico:// scheme
     ANALITICO_ASSET_RE = r"(analitico://workspaces/(?P<workspace_id>[-\w.]{4,256})/)"
 
-    def get_url(self, url) -> str:
-        """
-        If the url uses the analitico:// scheme for assets stored on the cloud
-        service, it will convert the url to a regular https:// scheme.
-        If the url points to an analitico API call, the request will have the
-        ?token= authorization token header added to it.
-        """
-        assert url and isinstance(url, str)
-        # temporarily while all internal urls are updated to analitico://
-        if url.startswith("workspaces/ws_"):
-            url = analitico.ANALITICO_URL_PREFIX + url
-
-        # see if assets uses analitico://workspaces/... scheme
-        if url.startswith("analitico://"):
-            if not self.endpoint:
-                raise PluginError("Factory is not configured with a valid API endpoint and cannot get: " + url)
-            url = self.endpoint + url[len("analitico://") :]
-        return url
+    def get_cached_stream(self, stream, unique_id):
+        """ Will cache a stream on disk based on a unique_id (like md5 or etag) and return file stream and filename """
+        cache_file = self.get_cache_filename(unique_id)
+        if not os.path.isfile(cache_file):
+            # if not cached already, download and cache
+            cache_temp_file = cache_file + ".tmp_" + id_generator()
+            with open(cache_temp_file, "wb") as f:
+                for b in stream:
+                    f.write(b)
+            os.rename(cache_temp_file, cache_file)
+        # return stream from cached file
+        return open(cache_file, "rb"), cache_file
 
     def get_url_stream(self, url, binary=False):
         """
@@ -98,7 +95,19 @@ class Factory(IFactory):
         endpoint with proper authorization tokens. The stream is returned as an iterator.
         """
         assert url and isinstance(url, str)
-        url = self.get_url(url)
+        # If the url uses the analitico:// scheme for assets stored on the cloud
+        # service, it will convert the url to a regular https:// scheme.
+        # If the url points to an analitico API call, the request will have the
+        # ?token= authorization token header added to it.
+        # temporarily while all internal urls are updated to analitico://
+        if url.startswith("workspaces/ws_"):
+            url = analitico.ANALITICO_URL_PREFIX + url
+        # see if assets uses analitico://workspaces/... scheme
+        if url.startswith("analitico://"):
+            if not self.endpoint:
+                raise PluginError("Factory is not configured with a valid API endpoint and cannot get: " + url)
+            url = self.endpoint + url[len("analitico://") :]
+
         try:
             url_parse = urlparse(url)
         except Exception:
@@ -110,34 +119,17 @@ class Factory(IFactory):
                 headers = {"Authorization": "Bearer " + self.token}
             response = requests.get(url, stream=True, headers=headers)
 
-            # TODO could cache here if md5 is provided?
-
-            if binary:
-                tf = tempfile.NamedTemporaryFile(mode='wb')
-                for chunk in response.iter_content(chunk_size=128*1024):
-                    tf.write(chunk)
-                tf.seek(0)
-                return tf.file           
-            else:
-                tf = tempfile.NamedTemporaryFile(mode='w+t', encoding="utf-8", prefix="analitico_t_")
-                if response.encoding is None:
-                    response.encoding = 'utf-8'
-                for chunk in response.iter_lines(decode_unicode=True):
-                    tf.write(chunk + "\n")
-                tf.seek(0)
-                return tf           
-
-        mode = "rb" if binary else "rt"
-        return open(url, mode)
+            etag = response.headers["etag"]
+            if etag:
+                return self.get_cached_stream(response.raw, url + etag)[0]
+            return response.raw
+        return open(url, "rb")
 
     def get_url_json(self, url):
         assert url and isinstance(url, str)
         url_stream = self.get_url_stream(url)
-        with tempfile.NamedTemporaryFile(mode="wb") as tf:
-            for b in url_stream:
-                tf.write(b)
-            tf.seek(0)
-            return json.load(tf, encoding="utf-8")
+        with StringIO(url_stream) as io:
+            return json.load(io, encoding="utf-8")
 
     ##
     ## Plugins
