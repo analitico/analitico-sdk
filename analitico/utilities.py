@@ -13,6 +13,7 @@ import psutil
 import collections
 import subprocess
 
+from django.conf import settings
 from datetime import datetime
 
 try:
@@ -61,6 +62,7 @@ def get_gpu_runtime():
 
 def get_runtime():
     """ Collect information on runtime environment, platform, python, hardware, etc """
+    started_on = time_ms()
     runtime = collections.OrderedDict()
     try:
         runtime["hostname"] = socket.gethostname()
@@ -113,7 +115,7 @@ def get_runtime():
         # production servers have an environment variable indicating git commit
         runtime["github"] = {}
         try:
-            runtime["github"]["version"] = subprocess.check_output(["git", "describe"]).strip()
+            runtime["github"]["version"] = str(subprocess.check_output(["git", "describe"]).strip())
         except:
             pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
@@ -122,6 +124,8 @@ def get_runtime():
             runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha
     except Exception as exc:
         runtime["exception"] = str(exc)
+    if settings.DEBUG:
+        runtime["elapsed_ms"] = time_ms(started_on)
     return runtime
 
 
