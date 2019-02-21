@@ -59,7 +59,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
                         index = column["name"]
 
             stream = self.factory.get_url_stream(url)
-            df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates)
+            df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates, encoding="utf-8")
 
             if index:
                 # transform specific column with unique values to dataframe index
