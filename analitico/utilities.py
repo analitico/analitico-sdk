@@ -12,6 +12,7 @@ import multiprocessing
 import psutil
 import collections
 import subprocess
+import sys
 
 from django.conf import settings
 from datetime import datetime
@@ -75,7 +76,11 @@ def get_runtime():
         except Exception:
             pass
 
-        runtime["python"] = {"version": platform.python_version(), "implementation": platform.python_implementation()}
+        runtime["python"] = {
+            "version": platform.python_version(),
+            "implementation": platform.python_implementation(),
+            "encoding": sys.getdefaultencoding(),
+        }
 
         hardware = collections.OrderedDict()
         runtime["hardware"] = hardware
