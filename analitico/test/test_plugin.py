@@ -84,7 +84,7 @@ class PluginTests(unittest.TestCase, TestMixin):
         self.assertEqual(df.loc[0, "First"], 10)
 
         # refers to df2 which DOES NOT exist
-        code = "df['First'] = df2['First'] + 2"
+        code = "df['First'] = INTENTIONALLY_UNDEFINED_df2['First'] + 2"
         plugin = self.factory.get_plugin(CODE_DATAFRAME_PLUGIN, code=code)
 
         with self.assertRaises(PluginError):
