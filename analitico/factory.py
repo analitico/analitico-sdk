@@ -110,16 +110,16 @@ class Factory(IFactory):
                 headers = {"Authorization": "Bearer " + self.token}
             response = requests.get(url, stream=True, headers=headers)
             return response.raw
-        return open(url)
+        return open(url, "rb")
 
     def get_url_json(self, url):
         assert url and isinstance(url, str)
         url_stream = self.get_url_stream(url)
-        with tempfile.NamedTemporaryFile() as tf:
+        with tempfile.NamedTemporaryFile(mode="wb") as tf:
             for b in url_stream:
                 tf.write(b)
             tf.seek(0)
-            return json.load(tf)
+            return json.load(tf, encoding="utf-8")
 
     ##
     ## Plugins
