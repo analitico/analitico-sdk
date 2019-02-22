@@ -128,8 +128,7 @@ class Factory(IFactory):
     def get_url_json(self, url):
         assert url and isinstance(url, str)
         url_stream = self.get_url_stream(url)
-        with StringIO(url_stream) as io:
-            return json.load(io, encoding="utf-8")
+        return json.load(url_stream, encoding="utf-8")
 
     ##
     ## Plugins
