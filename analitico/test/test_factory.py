@@ -31,7 +31,7 @@ class FactoryTests(unittest.TestCase, TestMixin):
 
     def test_factory_get_cache_filename_unique(self):
         file1 = self.factory.get_cache_filename(self.random_long_name())
-        for n in range(2, 20):
+        for _ in range(2, 20):
             file2 = self.factory.get_cache_filename(self.random_long_name())
             self.assertNotEqual(file1, file2)
 
