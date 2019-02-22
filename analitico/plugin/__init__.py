@@ -12,6 +12,7 @@ from .csvdataframesourceplugin import CsvDataframeSourcePlugin
 # plugins to tranform dataframes
 from .transforms import CodeDataframePlugin
 from .augmentdatesdataframeplugin import AugmentDatesDataframePlugin
+from .fusiondataframeplugin import FusionDataframePlugin
 
 # machine learning algorithms
 from .catboostregressorplugin import CatBoostRegressorPlugin

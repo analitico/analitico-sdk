@@ -1,13 +1,14 @@
-
 import pandas as pd
-from .interfaces import PluginError, IDataframePlugin, PluginPipelineMixin
+
+from .interfaces import IPlugin, PluginError, IDataframePlugin
+from .pipelineplugin import PipelinePlugin
 
 ##
 ## FusionDataframePlugin
 ##
 
 
-class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
+class FusionDataframePlugin(PipelinePlugin):
     """ 
     A plugin used to merge two datasources using specific merge rules.
     This plugin is a IDataframePlugin because it takes a dataframe
@@ -21,6 +22,8 @@ class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
 
     class Meta(IDataframePlugin.Meta):
         name = "analitico.plugin.FusionDataframePlugin"
+        inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
+        outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
     def run(self, *args, action=None, **kwargs) -> pd.DataFrame:
         """ Merge two pipelines into a single dataframe """
@@ -29,10 +32,13 @@ class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
             if not isinstance(df_left, pd.DataFrame):
                 self.exception("Should receive as input a single pd.DataFrame, received: %s", df_left)
 
-            # run the other pipeline to obtain the second table that we're joining on 
-            df_right = self.run_pipeline(action=action, **kwargs)
+            # run the pipeline to obtain the secondary table (right) that we're joining on
+            df_right = super().run(action=action, **kwargs)
             if not isinstance(df_right, pd.DataFrame):
-                self.exception("Plugins pipeline should produce a pd.DataFrame to be merged with main input, instead received: %s", df_right)
+                self.exception(
+                    "Plugins pipeline should produce a pd.DataFrame to be merged with main input, instead received: %s",
+                    df_right,
+                )
 
             # "merge" attribute contains a dictionary of settings that closely match those of pandas.merge:
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#database-style-dataframe-or-named-series-joining-merging
@@ -43,9 +49,9 @@ class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
 
             # "how" determines how we merge
             how = merge.get("how", "inner")
-            how_options = ['left', 'right', 'outer', 'inner']
+            how_options = ["left", "right", "outer", "inner"]
             if how not in how_options:
-                self.exception("Attribute how: %s is unknown, should be one of %s", how, str(how_options))            
+                self.exception("Attribute how: %s is unknown, should be one of %s", how, str(how_options))
 
             on = merge.get("on", None)
             if on:
@@ -58,7 +64,9 @@ class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
                     self.info("Merge left_on: %s, right_on: %s", left_on, right_on)
                     df_fusion = pd.merge(df_left, df_right, left_on=left_on, right_on=right_on, how=how)
                 else:
-                    self.exception("You need to specify how to merge dataframes either with the 'on' attribute or with the 'left_on' and 'right_on' attributes indicating the column names")
+                    self.exception(
+                        "You need to specify how to merge dataframes either with the 'on' attribute or with the 'left_on' and 'right_on' attributes indicating the column names"
+                    )
 
             self.info("Left columns: %s", df_left.columns)
             self.info("Left has %d rows", len(df_left))
@@ -68,6 +76,6 @@ class FusionDataframePlugin(IDataframePlugin, PluginPipelineMixin):
             self.info("Fusion has %d rows", len(df_fusion))
 
             return df_fusion
-        
+
         except Exception as exc:
             self.exception("Exception while merging dataframes", exception=exc)
