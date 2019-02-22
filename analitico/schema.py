@@ -129,13 +129,14 @@ def apply_schema(df: pd.DataFrame, schema):
     # select columns and apply types to columns
     names = []
     for column in schema["columns"]:
-        names.append(column["name"])
+        name = column["name"]
+        names.append(name)
         apply_type(df, **column)
 
         # make requested column index
         index = column.get("index", False)
         if index:
-            df = df.set_index(index, drop=False)
+            df = df.set_index(name, drop=False)
 
     # reorder and remove extra columns
     df = df[names]
