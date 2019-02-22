@@ -76,8 +76,14 @@ def generate_schema(df: pd.DataFrame) -> dict:
 def apply_type(df: pd.DataFrame, **kwargs):
     """ Apply given type to the column (parameters are type, name, etc from schema column) """
     assert isinstance(df, pd.DataFrame)
+
+    # no type? no op, some schemas may only have partial information
+    if "type" not in kwargs:
+        return
+
     cname = kwargs["name"]
     ctype = kwargs["type"]
+
     missing = cname not in df.columns
     if ctype == "string":
         if missing:
@@ -115,11 +121,31 @@ def apply_schema(df: pd.DataFrame, schema):
     """ 
     Applies the given schema to the dataframe. The method will scan columns
     in the schema and apply their type to columns in the dataframe. It will
-    then sort and filter columns according to schema.
+    then sort, filter and rename columns according to schema.
     """
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pd.DataFrame), "apply_schema should be passed a pd.DataFrame, received: " + str(df)
+    assert isinstance(schema, dict), "apply_schema should be passed a schema dictionary"
+
+    # select columns and apply types to columns
     names = []
     for column in schema["columns"]:
         names.append(column["name"])
         apply_type(df, **column)
-    return df[names]
+
+        # make requested column index
+        index = column.get("index", False)
+        if index:
+            df = df.set_index(index, drop=False)
+
+    # reorder and remove extra columns
+    df = df[names]
+
+    # see if there are columns that need to be renamed
+    rename = {}
+    for column in schema["columns"]:
+        if "rename" in column:
+            rename[column["name"]] = column["rename"]
+    if len(rename) > 0:
+        df = df.rename(index=str, columns=rename)
+
+    return df
