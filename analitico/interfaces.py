@@ -1,7 +1,10 @@
+
+import os
+import os.path
+import hashlib
+
 from abc import abstractmethod
-
 from .mixin import AttributeMixin
-
 
 class IFactory(AttributeMixin):
     """ A base abstract class providing runtime services like items and plugin creation, etc """
@@ -47,10 +50,9 @@ class IFactory(AttributeMixin):
         """ Returns directory to be used for caches """
         pass
 
-    @abstractmethod
     def get_cache_filename(self, unique_id):
         """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
-        pass
+        return os.path.join(self.get_cache_directory(), "cache_" + hashlib.sha256(unique_id.encode()).hexdigest())
 
     ##
     ## URL retrieval, authorization and caching
