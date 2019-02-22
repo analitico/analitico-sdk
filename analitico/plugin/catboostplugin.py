@@ -7,7 +7,6 @@ import os.path
 from abc import abstractmethod
 from sklearn.model_selection import train_test_split
 
-from analitico.utilities import get_dict_dot
 from analitico.utilities import time_ms
 from analitico.schema import generate_schema
 
