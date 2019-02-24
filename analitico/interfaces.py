@@ -108,14 +108,21 @@ class IFactory(AttributeMixin):
         """ A logger that should be used for tracing """
         pass
 
-    def info(self, msg, *args, **kwargs):
+    def info(self, msg, *args, plugin=None, **kwargs):
         self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg, *args, **kwargs):
+    def warning(self, msg, *args, plugin=None, **kwargs):
         self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg, *args, **kwargs):
-        self.logger.error(msg, *args, **kwargs)
+    def error(self, msg, *args, plugin=None, exception=None):
+        self.logger.error(msg, *args, exc_info=exception)
+
+    def exception(self, msg, *args, plugin=None, exception=None):
+        msg = msg % (args)
+        self.error(msg)
+        from analitico.plugin import PluginError
+
+        raise PluginError(msg, plugin=plugin, exception=exception)
 
     ##
     ## with xxx as: lifecycle methods
