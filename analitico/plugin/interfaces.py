@@ -71,6 +71,11 @@ class IPlugin(ABC, AttributeMixin):
     def error(self, msg, *args):
         self.logger.error(msg, *args)
 
+    def exception(self, msg, *args, exception=None):
+        msg = msg % (args)
+        self.error(msg)
+        raise PluginError(msg, plugin=self, exception=exception)
+
 
 ##
 ## IDataframeSourcePlugin - base class for plugins that create dataframes
@@ -258,5 +263,5 @@ class PluginError(Exception):
 
     def __str__(self):
         if self.plugin:
-            return self.plugin.name + ": " + self.message
+            return self.plugin.Meta.name + ": " + self.message
         return self.message
