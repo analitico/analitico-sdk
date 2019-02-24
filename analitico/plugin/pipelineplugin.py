@@ -4,6 +4,11 @@ ETL (extract, transform, load) pipeline or a graph used to
 process data and create a machine learning model.
 """
 
+import pandas as pd
+from django.conf import settings
+from analitico.utilities import time_ms
+from analitico.schema import pandas_to_analitico_type
+
 from .interfaces import IGroupPlugin
 
 ##
@@ -26,7 +31,12 @@ class PipelinePlugin(IGroupPlugin):
 
     def run(self, *args, action=None, **kwargs):
         """ Process plugins in sequence, return combinined chained result """
-        for plugin in self.plugins:
+
+        pipeline_on = time_ms()
+        self.info("%s - processing...", self.Meta.name)
+        for p, plugin in enumerate(self.plugins):
+            plugin_on = time_ms()
+            self.info("%s[%d] - processing...", plugin.Meta.name, p)
             # a plugin can have one or more input parameters and one or more
             # output parameters. results from a call to the next in the chain
             # are passed as tuples. when we finally return, if we have a single
@@ -37,4 +47,18 @@ class PipelinePlugin(IGroupPlugin):
             args = plugin.run(*args, action=action, **kwargs)
             if not isinstance(args, tuple):
                 args = (args,)
+
+            # print out diagnostics showing outputs of pipeline plugin
+            self.info("%s[%d] - done in %d ms", plugin.Meta.name, p, time_ms(plugin_on))
+            for i, arg in enumerate(args):
+                if isinstance(arg, pd.DataFrame):
+                    self.info("output[%d]: pd.DataFrame", i)
+                    self.info("  rows: %d", len(arg))
+                    self.info("  columns: %d", len(arg.columns))
+                    for j, column in enumerate(arg.columns):
+                        self.info("  %3d %s (%s/%s)", j, column, arg.dtypes[j], pandas_to_analitico_type(arg.dtypes[j]))
+                else:
+                    self.info("output[%d]: %s", i, str(type(arg)))
+
+        self.info("%s - done in %d ms", self.Meta.name, time_ms(pipeline_on))
         return args if len(args) > 1 else args[0]
