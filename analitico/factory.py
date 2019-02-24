@@ -157,6 +157,10 @@ class Factory(IFactory):
         plugin initialization code and will be stored as a plugin setting.
         """
         try:
+            # deprecated, temporary retrocompatibility 2019-02-24
+            if name == "analitico.plugin.AugmentDatesDataframePlugin":
+                name = "analitico.plugin.AugmentDatesPlugin"
+
             assert name and isinstance(name, str)
             klass = self._get_class_from_fully_qualified_name(name, scope=scope)
             if not klass:

@@ -11,7 +11,7 @@ from .csvdataframesourceplugin import CsvDataframeSourcePlugin
 
 # plugins to tranform dataframes
 from .transforms import CodeDataframePlugin
-from .augmentdatesdataframeplugin import AugmentDatesDataframePlugin
+from .augmentdatesplugin import AugmentDatesPlugin
 from .fusiondataframeplugin import FusionDataframePlugin
 from .transformdataframeplugin import TransformDataframePlugin
 
@@ -27,7 +27,7 @@ from .endpointpipelineplugin import EndpointPipelinePlugin
 
 CSV_DATAFRAME_SOURCE_PLUGIN = CsvDataframeSourcePlugin.Meta.name
 CODE_DATAFRAME_PLUGIN = CodeDataframePlugin.Meta.name
-AUGMENT_DATES_DATAFRAME_PLUGIN = AugmentDatesDataframePlugin.Meta.name
+AUGMENT_DATES_PLUGIN = AugmentDatesPlugin.Meta.name
 FUSION_DATAFRAME_PLUGIN = FusionDataframePlugin.Meta.name
 TRANSFORM_DATAFRAME_PLUGIN = TransformDataframePlugin.Meta.name
 CATBOOST_REGRESSOR_PLUGIN = CatBoostRegressorPlugin.Meta.name
