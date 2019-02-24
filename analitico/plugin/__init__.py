@@ -13,6 +13,7 @@ from .csvdataframesourceplugin import CsvDataframeSourcePlugin
 from .transforms import CodeDataframePlugin
 from .augmentdatesdataframeplugin import AugmentDatesDataframePlugin
 from .fusiondataframeplugin import FusionDataframePlugin
+from .transformdataframeplugin import TransformDataframePlugin
 
 # machine learning algorithms
 from .catboostregressorplugin import CatBoostRegressorPlugin
@@ -27,6 +28,8 @@ from .endpointpipelineplugin import EndpointPipelinePlugin
 CSV_DATAFRAME_SOURCE_PLUGIN = CsvDataframeSourcePlugin.Meta.name
 CODE_DATAFRAME_PLUGIN = CodeDataframePlugin.Meta.name
 AUGMENT_DATES_DATAFRAME_PLUGIN = AugmentDatesDataframePlugin.Meta.name
+FUSION_DATAFRAME_PLUGIN = FusionDataframePlugin.Meta.name
+TRANSFORM_DATAFRAME_PLUGIN = TransformDataframePlugin.Meta.name
 CATBOOST_REGRESSOR_PLUGIN = CatBoostRegressorPlugin.Meta.name
 CATBOOST_CLASSIFIER_PLUGIN = CatBoostClassifierPlugin.Meta.name
 PIPELINE_PLUGIN = PipelinePlugin.Meta.name
