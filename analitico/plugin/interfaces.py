@@ -63,18 +63,16 @@ class IPlugin(ABC, AttributeMixin):
         return self.factory.logger
 
     def info(self, msg, *args):
-        self.logger.info(msg, *args)
+        self.factory.info(msg, *args)
 
     def warning(self, msg, *args):
-        self.logger.warning(msg, *args)
+        self.factory.warning(msg, *args)
 
-    def error(self, msg, *args):
-        self.logger.error(msg, *args)
+    def error(self, msg, *args, exception=None):
+        self.factory.error(msg, *args, plugin=self, exception=exception)
 
     def exception(self, msg, *args, exception=None):
-        msg = msg % (args)
-        self.error(msg)
-        raise PluginError(msg, plugin=self, exception=exception)
+        self.factory.exception(msg, *args, plugin=self, exception=exception)
 
 
 ##
