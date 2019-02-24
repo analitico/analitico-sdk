@@ -83,3 +83,22 @@ class CatBoostClassifierPlugin(CatBoostPlugin):
             }
         # superclass will save test.csv
         super().score_training(model, test_df, test_pool, test_labels, results)
+
+    def predict(self, data, training, results, *args, **kwargs):
+        """ Return predictions from trained model """
+        # initialize data pool to be tested
+        categorical_idx = self.get_categorical_idx(data)
+        data_pool = catboost.Pool(data, cat_features=categorical_idx)
+
+        # create model object from stored file
+        loading_on = time_ms()
+        model_filename = os.path.join(self.factory.get_artifacts_directory(), "model.cbm")
+        model = self.create_model()
+        model.load_model(model_filename)
+        results["performance"]["loading_ms"] = time_ms(loading_on)
+
+        # create predictions with assigned class and probabilities
+        predictions = model.predict(data_pool)
+        predictions = np.around(predictions, decimals=3)
+        results["predictions"] = list(predictions)
+        return results
