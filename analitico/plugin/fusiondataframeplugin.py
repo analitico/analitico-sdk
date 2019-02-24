@@ -9,9 +9,15 @@ from .pipelineplugin import PipelinePlugin
 ##
 
 ERROR_NO_INPUT_DF = "Should receive as input a single pd.DataFrame, received: %s"
-ERROR_NO_PIPELINE_DF = "Plugins pipeline should produce a pd.DataFrame to be merged with main input, instead received: %s"
-ERROR_NO_LEFT_COLUMN = "The left (main) dataframe does not have a column named '%s' to merge on. Available columns are: %s."
-ERROR_NO_RIGHT_COLUMN = "The right (secondary) dataframe does not have a column named '%s' to merge on. Available columns are: %s."
+ERROR_NO_PIPELINE_DF = (
+    "Plugins pipeline should produce a pd.DataFrame to be merged with main input, instead received: %s"
+)
+ERROR_NO_LEFT_COLUMN = (
+    "The left (main) dataframe does not have a column named '%s' to merge on. Available columns are: %s."
+)
+ERROR_NO_RIGHT_COLUMN = (
+    "The right (secondary) dataframe does not have a column named '%s' to merge on. Available columns are: %s."
+)
 ERROR_NO_MERGE_CONF = "You need to specify how to merge dataframes either with the 'on' attribute or with the 'left_on' and 'right_on' attributes indicating the column names"
 
 
@@ -27,12 +33,10 @@ class FusionDataframePlugin(PipelinePlugin):
     pandas' merge parameters.
     """
 
-
     class Meta(IDataframePlugin.Meta):
         name = "analitico.plugin.FusionDataframePlugin"
         inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
-
 
     def run(self, *args, action=None, **kwargs) -> pd.DataFrame:
         """ Merge two pipelines into a single dataframe """
@@ -50,7 +54,7 @@ class FusionDataframePlugin(PipelinePlugin):
             self.info("Left rows: %d", len(df_left))
             self.info("Right columns: %s", pd_columns_to_string(df_right))
             self.info("Right rows: %d", len(df_right))
-            
+
             # "merge" attribute contains a dictionary of settings that closely match those of pandas.merge:
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#database-style-dataframe-or-named-series-joining-merging
 
@@ -63,7 +67,6 @@ class FusionDataframePlugin(PipelinePlugin):
             how_options = ["left", "right", "outer", "inner"]
             if how not in how_options:
                 self.exception("Attribute how: %s is unknown, should be one of %s", how, str(how_options))
-
 
             on = merge.get("on", None)
             if on:

@@ -25,10 +25,30 @@ ANALITICO_TYPE_TIMESPAN = "timespan"
 ANALITICO_TYPE_CATEGORY = "category"
 
 # these values are replaced with pd.NaN
-NA_VALUES = ['None', '', '#N/A', '#N/A', 'N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan', '1.#IND', '1.#QNAN', 'N/A', 'NA', 'NULL', 'NaN', 'n/a', 'nan', 'null']
+NA_VALUES = [
+    "None",
+    "",
+    "#N/A",
+    "#N/A",
+    "N/A",
+    "#NA",
+    "-1.#IND",
+    "-1.#QNAN",
+    "-NaN",
+    "-nan",
+    "1.#IND",
+    "1.#QNAN",
+    "N/A",
+    "NA",
+    "NULL",
+    "NaN",
+    "n/a",
+    "nan",
+    "null",
+]
 
 # these values are replaced with pd.NaT
-NA_DATES = NA_VALUES + [0, '0']
+NA_DATES = NA_VALUES + [0, "0"]
 
 
 def analitico_to_pandas_type(data_type: str):

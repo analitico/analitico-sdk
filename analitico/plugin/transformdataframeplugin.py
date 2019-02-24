@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 from analitico.schema import apply_schema
@@ -28,10 +27,9 @@ class TransformDataframePlugin(IDataframePlugin):
                 "name": "schema",
                 "type": "analitico/schema",
                 "optional": False,
-                "description": "The schema is applied to the input dataframe. The choice and attributes of columns indicate how they are filtered, ordered, cast, etc."
+                "description": "The schema is applied to the input dataframe. The choice and attributes of columns indicate how they are filtered, ordered, cast, etc.",
             }
         ]
-
 
     def run(self, *args, action=None, **kwargs) -> pd.DataFrame:
 
@@ -42,7 +40,9 @@ class TransformDataframePlugin(IDataframePlugin):
 
         schema = self.get_attribute("schema")
         if not schema:
-            self.warning("TransformDataframePlugin - should have a 'schema' attribute with the schema that you want to apply to the input dataframe")
+            self.warning(
+                "TransformDataframePlugin - should have a 'schema' attribute with the schema that you want to apply to the input dataframe"
+            )
             return args
 
         df = apply_schema(df, schema)

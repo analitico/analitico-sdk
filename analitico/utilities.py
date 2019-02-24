@@ -287,10 +287,12 @@ def pd_timediff_min(df, column_start, column_end, column_diff):
     df[column_diff] = df[column_end] - df[column_start]
     df[column_diff] = df[column_diff].dt.total_seconds() / 60.0
 
+
 def pd_columns_to_string(df):
     """ Returns a single string with a list of columns, eg: 'col1', 'col2', 'col3' """
     columns = "".join("'" + column + "', " for column in df.columns)
     return columns[:-2]
+
 
 ##
 ## CSV
