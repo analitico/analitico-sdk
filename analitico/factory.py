@@ -168,7 +168,7 @@ class Factory(IFactory):
             return (klass)(factory=self, **kwargs)
         except Exception as exc:
             message = "Factory.get_plugin - can't create " + name
-            self.warning(message, exc_info=exc)
+            self.warning(message, exception=exc)
             raise PluginError(message)
 
     ##
