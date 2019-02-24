@@ -346,6 +346,26 @@ class DatasetTests(unittest.TestCase, TestMixin):
         except Exception as exc:
             raise exc
 
+    def test_dataset_csv9_types_datetime_nulls(self):
+        """ Test reading datetime that has null values """
+        try:
+            df = self.read_dataframe_asset("ds_test_9.json")
+            self.assertEqual(df.dtypes[0], "int64")
+            self.assertEqual(df.dtypes[1], "O")
+            self.assertTrue(df.dtypes[2] == "datetime64[ns]")
+
+            self.assertTrue(isinstance(df.iloc[0, 2], pd.Timestamp))
+            self.assertTrue(isinstance(df.iloc[1, 2], pd.Timestamp))
+
+            # all these are variantions on None and null
+            self.assertTrue(pd.isnull(df.iloc[2, 2]))
+            self.assertTrue(pd.isnull(df.iloc[3, 2]))
+            self.assertTrue(pd.isnull(df.iloc[4, 2]))
+            self.assertTrue(pd.isnull(df.iloc[5, 2]))
+            self.assertTrue(pd.isnull(df.iloc[6, 2]))
+        except Exception as exc:
+            raise exc
+
     # TODO: test reading number that use . for thousands (eg: en-us, locale)
 
     # TODO: test datetime in localized formats
