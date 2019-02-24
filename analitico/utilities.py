@@ -15,6 +15,7 @@ import subprocess
 import sys
 import random
 import string
+import dateutil
 
 from django.conf import settings
 from datetime import datetime
@@ -251,6 +252,16 @@ def set_dict_dot(d: dict, key: str, value=None):
 ##
 
 
+def pd_date_parser(x):
+    if not x:
+        return None
+    lower_x = x.lower()
+    if lower_x in ("none", "null", "nan", "empty"):
+        return None
+    date = dateutil.parser.parser(x)
+    return date
+
+
 def pd_cast_datetime(df, column):
     """ Casts a string column to a date column, assumes format is recognizable """
     df[column] = pd.to_datetime(df[column], infer_datetime_format=True, errors="coerce")
@@ -276,6 +287,10 @@ def pd_timediff_min(df, column_start, column_end, column_diff):
     df[column_diff] = df[column_end] - df[column_start]
     df[column_diff] = df[column_diff].dt.total_seconds() / 60.0
 
+def pd_columns_to_string(df):
+    """ Returns a single string with a list of columns, eg: 'col1', 'col2', 'col3' """
+    columns = "".join("'" + column + "', " for column in df.columns)
+    return columns[:-2]
 
 ##
 ## CSV
