@@ -24,6 +24,12 @@ ANALITICO_TYPE_DATETIME = "datetime"
 ANALITICO_TYPE_TIMESPAN = "timespan"
 ANALITICO_TYPE_CATEGORY = "category"
 
+# these values are replaced with pd.NaN
+NA_VALUES = ['None', '', '#N/A', '#N/A', 'N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan', '1.#IND', '1.#QNAN', 'N/A', 'NA', 'NULL', 'NaN', 'n/a', 'nan', 'null']
+
+# these values are replaced with pd.NaT
+NA_DATES = NA_VALUES + [0, '0']
+
 
 def analitico_to_pandas_type(data_type: str):
     """ Converts an analitico data type to the equivalent dtype string for pandas dataframes """
@@ -104,6 +110,10 @@ def apply_type(df: pd.DataFrame, **kwargs):
     elif ctype == "datetime":
         if missing:
             df[cname] = None
+        else:
+            # strings like no
+            for not_a_date in NA_DATES:
+                df[cname].replace(not_a_date, np.nan, inplace=True)
         df[cname] = df[cname].astype("datetime64[ns]")
     elif ctype == "timespan":
         if missing:
