@@ -293,7 +293,6 @@ def pd_columns_to_string(df):
     columns = "".join("'" + column + "', " for column in df.columns)
     return columns[:-2]
 
-
 ##
 ## CSV
 ##
