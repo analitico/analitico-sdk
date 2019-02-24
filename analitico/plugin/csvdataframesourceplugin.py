@@ -3,8 +3,8 @@ Plugins that import dataframes from different sources
 """
 
 import pandas
-from analitico.utilities import get_dict_dot
-from analitico.schema import analitico_to_pandas_type, apply_schema
+from analitico.utilities import get_dict_dot, pd_date_parser
+from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
 from .interfaces import IDataframeSourcePlugin, PluginError
 
 ##
@@ -38,26 +38,25 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
             columns = schema.get("columns") if schema else None
 
             dtype = None
-            parse_dates = None
-
             if columns:
                 dtype = {}
-                parse_dates = []
                 for idx, column in enumerate(columns):
                     if "type" in column:  # type is optionally defined
                         if column["type"] == "datetime":
-                            # ISO8601 dates only for now
-                            # TODO use converters to apply date patterns #16
-                            parse_dates.append(idx)
+                            dtype[column["name"]] = "object"
                         elif column["type"] == "timespan":
-                            # timedelta needs to be applied later on or else we will get:
-                            # 'the dtype timedelta64 is not supported for parsing'
                             dtype[column["name"]] = "object"
                         else:
                             dtype[column["name"]] = analitico_to_pandas_type(column["type"])
 
             stream = self.factory.get_url_stream(url, binary=False)
-            df = pandas.read_csv(stream, dtype=dtype, parse_dates=parse_dates, encoding="utf-8")
+            df = pandas.read_csv(stream, dtype=dtype, encoding="utf-8", na_values=NA_VALUES)
+
+            tail = self.get_attribute("tail", 0)
+            if tail > 0:
+                rows_before = len(df)
+                df = df.tail(tail)
+                self.info("tail: %d, rows before: %d, rows after: %d", tail, rows_before, len(df))
 
             if schema:
                 # reorder, filter, apply types, rename columns as requested in schema
@@ -65,4 +64,4 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
 
             return df
         except Exception as exc:
-            self.exception("Error while processing: %s", url, exc_info=exc)
+            self.exception("Error while processing: %s", url, exception=exc)
