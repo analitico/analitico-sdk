@@ -1,4 +1,4 @@
-""" Regression and classification plugins based on CatBoost """
+# Regression and classification plugins based on CatBoost
 
 import pandas as pd
 import numpy as np
@@ -16,6 +16,8 @@ from sklearn.metrics import (
     accuracy_score,
     precision_score,
     recall_score,
+    classification_report,
+    confusion_matrix
 )
 
 import catboost
@@ -188,22 +190,16 @@ class CatBoostPlugin(IAlgorithmPlugin):
         scores["recall_score_macro"] = round(recall_score(test_true, test_preds, average="macro"), 5)
         scores["recall_score_weighted"] = round(recall_score(test_true, test_preds, average="weighted"), 5)
 
-        self.info("log_loss: %f", scores["log_loss"])
-        self.info("accuracy_score: %f", scores["accuracy_score"])
-        self.info("precision_score_micro: %f", scores["precision_score_micro"])
-        self.info("precision_score_macro: %f", scores["precision_score_macro"])
+        self.info("Log_loss: %f", scores["log_loss"])
+        self.info("Accuracy_score: %f", scores["accuracy_score"])
+        self.info("Precision_score_micro: %f", scores["precision_score_micro"])
+        self.info("Precision_score_macro: %f", scores["precision_score_macro"])
 
-        # Report precision and recall for each of the classes
-        scores["classes_scores"] = {}
-        count = collections.Counter(test_true)
-        precision_scores = precision_score(test_true, test_preds, average=None)
-        recall_scores = recall_score(test_true, test_preds, average=None)
-        for idx, val in enumerate(train_classes):
-            scores["classes_scores"][val] = {
-                "count": count[idx],
-                "precision": round(precision_scores[idx], 5),
-                "recall": round(recall_scores[idx], 5),
-            }
+        # complete classification report and confusion matrix
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html#sklearn.metrics.classification_report
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html#sklearn.metrics.confusion_matrix
+        scores["classification_report"] = classification_report(test_true, test_preds, target_names=results["data"]["classes"], output_dict=True)
+        scores["confusion_matrix"] = confusion_matrix(test_true, test_preds).tolist()
 
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
@@ -231,22 +227,22 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     else ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION
                 )
                 self.info(
-                    "Algorithm is '%s' with %d classes: %s", results["algorithm"], len(label_classes), label_classes
+                    "Algorithm: '%s' with %d classes: %s", results["algorithm"], len(label_classes), label_classes
                 )
             else:
                 results["algorithm"] = ALGORITHM_TYPE_REGRESSION
-                self.info("Algorithm is '%s'", results["algorithm"])
+                self.info("Algorithm: '%s'", results["algorithm"])
 
             # remove rows with missing label from training and test sets
             train_rows = len(train_df)
             train_df = train_df.dropna(subset=[label])
             if len(train_df) < train_rows:
-                self.warning("training data has %s rows without '%s' label", train_rows - len(train_df), label)
+                self.warning("Training data has %s rows without '%s' label", train_rows - len(train_df), label)
             if test_df:
                 test_rows = len(test_df)
                 test_df = test_df.dropna(subset=[label])
                 if len(test_df) < test_rows:
-                    self.warning("test data has %s rows without '%s' label", test_rows - len(test_df), label)
+                    self.warning("Test data has %s rows without '%s' label", test_rows - len(test_df), label)
 
             # make sure schemas match
             train_schema = self.validate_schema(train_df, test_df)
@@ -254,7 +250,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             # shortened training was requested?
             tail = self.get_attribute("parameters.tail", 0)
             if tail > 0:
-                self.info("tail: %d, cutting training data", tail)
+                self.info("Tail: %d, cutting training data", tail)
                 train_df = train_df.tail(tail).copy()
 
             # create test set from training set if not provided
@@ -267,13 +263,13 @@ class CatBoostPlugin(IAlgorithmPlugin):
                 results["parameters"]["test_size"] = test_size
                 if chronological:
                     # test set if from the last rows (chronological order)
-                    self.info("chronological test split")
+                    self.info("Test set split: chronological")
                     test_rows = int(len(train_df) * test_size)
                     test_df = train_df[-test_rows:]
                     train_df = train_df[:-test_rows]
                 else:
                     # test set if from a random assortment of rows
-                    self.info("random test set split")
+                    self.info("Test set split: random")
                     train_df, test_df, = train_test_split(train_df, test_size=test_size, random_state=42)
 
             self.info("training set %d rows", len(train_df))
@@ -283,7 +279,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             for column in train_schema["columns"]:
                 if column["type"] not in ("integer", "float", "boolean", "category"):
                     self.warning(
-                        "column '%s' of type '%s' is incompatible and will be dropped", column["name"], column["type"]
+                        "Column '%s' of type '%s' is incompatible and will be dropped", column["name"], column["type"]
                     )
                     train_df = train_df.drop(column["name"], axis=1)
                     test_df = test_df.drop(column["name"], axis=1)
@@ -327,7 +323,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             model_path = os.path.join(artifacts_path, "model.cbm")
             model.save_model(model_path)
             results["scores"]["model_size"] = os.path.getsize(model_path)
-            self.info("saved %s (%d bytes)", model_path, os.path.getsize(model_path))
+            self.info("Saved: %s (%d bytes)", model_path, os.path.getsize(model_path))
 
             return results
 
@@ -378,3 +374,32 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     probs.append({y_classes[0]: y_probabilities[i][0], y_classes[1]: y_probabilities[i][1]})
 
         return results
+
+
+##
+## CatBoostRegressorPlugin
+##
+
+
+class CatBoostRegressorPlugin(CatBoostPlugin):
+    """ A tabular data regressor based on CatBoost library """
+
+    class Meta(CatBoostPlugin.Meta):
+        name = "analitico.plugin.CatBoostRegressorPlugin"
+        algorithms = [ALGORITHM_TYPE_REGRESSION]
+
+##
+## CatBoostClassifierPlugin
+##
+
+
+
+class CatBoostClassifierPlugin(CatBoostPlugin):
+    """ A tabular data classifier based on CatBoost """
+
+    class Meta(CatBoostPlugin.Meta):
+        name = "analitico.plugin.CatBoostClassifierPlugin"
+        algorithms = [
+            ALGORITHM_TYPE_BINARY_CLASSICATION,
+            ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
+        ]

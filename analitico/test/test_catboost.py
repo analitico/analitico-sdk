@@ -19,6 +19,18 @@ ASSETS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/assets"
 class CatBoostTests(unittest.TestCase, TestMixin):
     """ Unit testing of machine learning algorithms """
 
+    def train_iris(self, factory):
+        """ Train iris.csv dataset using a multiclass classifier, return df and training results """
+        csv_path = self.get_asset_path("iris_1.csv")
+        df = pd.read_csv(csv_path)
+        df = df.drop(columns=["Id"])
+        df["Species"] = df["Species"].astype("category")
+        catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
+        # run training
+        training = catboost.run(df.copy(), action="recipe/train")
+        self.assertIsNotNone(training)
+        return df, training
+
     def test_catboost_binary_classifier_training(self):
         """ Test training catboost as a binary classifier """
         try:
@@ -149,34 +161,8 @@ class CatBoostTests(unittest.TestCase, TestMixin):
         """ Test training catboost as a multiclass classifier """
         try:
             with Factory() as factory:
-                csv_path = self.get_asset_path("iris_1.csv")
-                recipe = RecipePipelinePlugin(
-                    factory=factory,
-                    plugins=[
-                        CsvDataframeSourcePlugin(
-                            source={
-                                "url": csv_path,
-                                "schema": {
-                                    # Id column is not used to model
-                                    "drop": [{"name": "Id"}],
-                                    # Species column is marked as categorical to trigger multiclass classifier
-                                    "apply": [{"name": "Species", "type": "category"}],
-                                },
-                            }
-                        ),
-                        CatBoostPlugin(parameters={"learning_rate": 0.2}),
-                    ],
-                )
+                df, results = self.train_iris(factory)
 
-                self.assertEqual(len(recipe.plugins), 2)
-                self.assertTrue(isinstance(recipe, RecipePipelinePlugin))
-                self.assertTrue(isinstance(recipe.plugins[0], CsvDataframeSourcePlugin))
-                self.assertTrue(isinstance(recipe.plugins[1], CatBoostPlugin))
-
-                # run training
-                results = recipe.run(action="recipe/train")
-
-                self.assertIsNotNone(results)
                 self.assertEqual(results["data"]["label"], "Species")
                 self.assertEqual(results["data"]["source_records"], 150)
                 self.assertEqual(results["data"]["training_records"], 120)
@@ -210,19 +196,40 @@ class CatBoostTests(unittest.TestCase, TestMixin):
             factory.error("test_catboost_multiclass_classifier - " + str(exc))
             pass
 
+
+    def test_catboost_multiclass_classifier_training_classification_report(self):
+        try:
+            with Factory() as factory:
+                df, results = self.train_iris(factory)
+
+                classes = results["data"]["classes"]
+                scores = results["scores"]
+                self.assertIn("classification_report", scores)
+                for class_name in classes:
+                    self.assertIn(class_name, scores["classification_report"])
+                    class_report = scores["classification_report"][class_name]
+                    self.assertIn("f1-score", class_report)
+                    self.assertIn("precision", class_report)
+                    self.assertIn("recall", class_report)
+                    self.assertIn("support", class_report)
+
+                self.assertIn("confusion_matrix", scores)
+                confusion_matrix = scores["confusion_matrix"]
+                self.assertEqual(len(confusion_matrix), len(classes))
+                for line in confusion_matrix:
+                    self.assertEqual(len(line), len(classes))
+
+        except Exception as exc:
+            factory.error("test_catboost_multiclass_classifier_training_classification_report - " + str(exc))
+            pass
+
+
+
     def test_catboost_multiclass_classifier_prediction(self):
         """ Test predictions with catboost as a binary classifier """
         try:
             with Factory() as factory:
-                csv_path = self.get_asset_path("iris_1.csv")
-                df = pd.read_csv(csv_path)
-                df = df.drop(columns=["Id"])
-                df["Species"] = df["Species"].astype("category")
-                catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
-
-                # run training
-                training = catboost.run(df.copy(), action="recipe/train")
-                self.assertIsNotNone(training)
+                df, training = self.train_iris(factory)
 
                 df_labels = df[["Species"]]
                 df = df.drop(columns=["Species"])

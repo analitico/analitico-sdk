@@ -17,8 +17,8 @@ from .transformdataframeplugin import TransformDataframePlugin
 
 # machine learning algorithms
 from .catboostplugin import CatBoostPlugin
-from .catboostregressorplugin import CatBoostRegressorPlugin
-from .catboostclassifierplugin import CatBoostClassifierPlugin
+from .catboostplugin import CatBoostRegressorPlugin
+from .catboostplugin import CatBoostClassifierPlugin
 
 # plugin workflows
 from .pipelineplugin import PipelinePlugin
