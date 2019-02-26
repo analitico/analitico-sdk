@@ -4,6 +4,7 @@ import os.path
 
 import pandas as pd
 
+import sklearn.metrics
 from sklearn.datasets import load_boston
 
 from analitico.factory import Factory
@@ -15,10 +16,10 @@ from .test_mixin import TestMixin
 ASSETS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/assets"
 
 
-class AlgorithmTests(unittest.TestCase, TestMixin):
+class CatBoostTests(unittest.TestCase, TestMixin):
     """ Unit testing of machine learning algorithms """
 
-    def test_catboost_binary_classifier(self):
+    def test_catboost_binary_classifier_training(self):
         """ Test training catboost as a binary classifier """
         try:
             with Factory() as factory:
@@ -64,7 +65,87 @@ class AlgorithmTests(unittest.TestCase, TestMixin):
             factory.error("test_catboost_binary_classifier - " + str(exc))
             pass
 
-    def test_catboost_multiclass_classifier(self):
+    def test_catboost_binary_classifier_prediction(self):
+        """ Test predictions with catboost as a binary classifier """
+        try:
+            with Factory() as factory:
+                csv_path = self.get_asset_path("titanic_1.csv")
+                df = pd.read_csv(csv_path)
+                df["Survived"] = df["Survived"].astype("category")
+                catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
+
+                # run training
+                training = catboost.run(df.copy(), action="recipe/train")
+                self.assertIsNotNone(training)
+
+                df_labels = df[["Survived"]]
+                df = df.drop(columns=["Survived"])
+                predict = catboost.run(df, action="endpoint/predict")
+
+                # check to make sure predictions are from available labels
+                self.assertIn("predictions", predict)
+                self.assertEqual(len(predict["predictions"]), len(df))
+                for prediction in predict["predictions"]:
+                    self.assertIn(prediction, training["data"]["classes"])
+
+                # make sure each record had each class scored
+                self.assertIn("probabilities", predict)
+                self.assertEqual(len(predict["probabilities"]), len(df))
+                for probability in predict["probabilities"]:
+                    for label_class in training["data"]["classes"]:
+                        self.assertIn(label_class, probability)
+
+                # check correctness of predictions
+                report = sklearn.metrics.classification_report(df_labels, predict["predictions"], output_dict=True)
+                self.assertGreater(report["0"]["f1-score"], 0.80)
+                self.assertGreater(report["1"]["f1-score"], 0.65)
+
+        except Exception as exc:
+            factory.error("test_catboost_multiclass_classifier_prediction - " + str(exc))
+            pass
+
+    def test_catboost_binary_classifier_prediction_with_labels(self):
+        """ Test predictions with catboost as a binary classifier (using labels instead of int) """
+        try:
+            with Factory() as factory:
+                csv_path = self.get_asset_path("titanic_1.csv")
+                df = pd.read_csv(csv_path)
+                df["Survived"] = df["Survived"].map({0: "No", 1: "Yes"})
+                df["Survived"] = df["Survived"].astype("category")
+
+                catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
+
+                # run training
+                training = catboost.run(df.copy(), action="recipe/train")
+                self.assertIsNotNone(training)
+
+                df_labels = df[["Survived"]]
+                df = df.drop(columns=["Survived"])
+                predict = catboost.run(df, action="endpoint/predict")
+
+                # check to make sure predictions are from available labels
+                self.assertIn("predictions", predict)
+                self.assertEqual(len(predict["predictions"]), len(df))
+                for prediction in predict["predictions"]:
+                    self.assertIn(prediction, training["data"]["classes"])
+
+                # make sure each record had each class scored
+                self.assertIn("probabilities", predict)
+                self.assertEqual(len(predict["probabilities"]), len(df))
+                for probability in predict["probabilities"]:
+                    for label_class in training["data"]["classes"]:
+                        self.assertIn(label_class, probability)
+
+                # check correctness of predictions
+                report = sklearn.metrics.classification_report(df_labels, predict["predictions"], output_dict=True)
+                self.assertGreater(report["No"]["f1-score"], 0.80)
+                self.assertGreater(report["Yes"]["f1-score"], 0.65)
+
+        except Exception as exc:
+            factory.error("test_catboost_multiclass_classifier_prediction - " + str(exc))
+            pass
+
+    def test_catboost_multiclass_classifier_training(self):
         """ Test training catboost as a multiclass classifier """
         try:
             with Factory() as factory:
@@ -129,10 +210,54 @@ class AlgorithmTests(unittest.TestCase, TestMixin):
             factory.error("test_catboost_multiclass_classifier - " + str(exc))
             pass
 
-    def test_catboost_regressor(self):
+    def test_catboost_multiclass_classifier_prediction(self):
+        """ Test predictions with catboost as a binary classifier """
+        try:
+            with Factory() as factory:
+                csv_path = self.get_asset_path("iris_1.csv")
+                df = pd.read_csv(csv_path)
+                df = df.drop(columns=["Id"])
+                df["Species"] = df["Species"].astype("category")
+                catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
+
+                # run training
+                training = catboost.run(df.copy(), action="recipe/train")
+                self.assertIsNotNone(training)
+
+                df_labels = df[["Species"]]
+                df = df.drop(columns=["Species"])
+                predict = catboost.run(df, action="endpoint/predict")
+
+                # check to make sure predictions are from available labels
+                self.assertIn("predictions", predict)
+                self.assertEqual(len(predict["predictions"]), len(df))
+                for prediction in predict["predictions"]:
+                    self.assertIn(prediction, training["data"]["classes"])
+
+                # make sure each record had each class scored
+                self.assertIn("probabilities", predict)
+                self.assertEqual(len(predict["probabilities"]), len(df))
+                for probability in predict["probabilities"]:
+                    for label_class in training["data"]["classes"]:
+                        self.assertIn(label_class, probability)
+
+                # check correctness of predictions
+                # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html
+                report = sklearn.metrics.classification_report(df_labels, predict["predictions"], output_dict=True)
+                self.assertGreater(report["Iris-setosa"]["f1-score"], 0.95)
+                self.assertGreater(report["Iris-versicolor"]["f1-score"], 0.95)
+                self.assertGreater(report["Iris-virginica"]["f1-score"], 0.95)
+
+        except Exception as exc:
+            factory.error("test_catboost_multiclass_classifier_prediction - " + str(exc))
+            pass
+
+    def test_catboost_regressor_training(self):
         """ Test training catboost as a regressor """
         try:
             with Factory() as factory:
+                # boston data info here:
+                # https://towardsdatascience.com/linear-regression-on-boston-housing-dataset-f409b7e4a155
                 # bare bones, just run the plugin by itself w/o pipeline
                 catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
 

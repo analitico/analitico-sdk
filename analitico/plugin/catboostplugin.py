@@ -57,38 +57,27 @@ class CatBoostPlugin(IAlgorithmPlugin):
             ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
         ]
 
-    @property
-    def algorithm(self):
-        return self.get_attribute("algorithm")
-
-    @algorithm.setter
-    def algorithm(self, value):
-        self.set_attribute("algorithm", value)
-
     def create_model(self, results):
-        """ Creates actual CatBoostClassifier or CatBoostRegressor model in subclass """
-
+        """ Creates actual CatBoostClassifier or CatBoostRegressor model """
         iterations = self.get_attribute("parameters.iterations", 50)
         learning_rate = self.get_attribute("parameters.learning_rate", 1)
         depth = self.get_attribute("parameters.depth", 8)
-
         if results:
             results["parameters"]["iterations"] = iterations
             results["parameters"]["learning_rate"] = learning_rate
             results["parameters"]["depth"] = depth
-
-        if self.algorithm == ALGORITHM_TYPE_REGRESSION:
+        if results["algorithm"] == ALGORITHM_TYPE_REGRESSION:
             return CatBoostRegressor(iterations=iterations, learning_rate=learning_rate, depth=depth)
-        elif self.algorithm == ALGORITHM_TYPE_BINARY_CLASSICATION:
+        elif results["algorithm"] == ALGORITHM_TYPE_BINARY_CLASSICATION:
             return CatBoostClassifier(
                 iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="Logloss"
             )
-        elif self.algorithm == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
+        elif results["algorithm"] == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
             return CatBoostClassifier(
                 iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="MultiClass"
             )
         else:
-            raise PluginError("CatBoostPlugin.create_model - can't handle algorithm type: %s", self.algorithm)
+            raise PluginError("CatBoostPlugin.create_model - can't handle algorithm type: %s", results["algorithm"])
 
     def get_categorical_idx(self, df):
         """ Return indexes of the columns that should be considered categorical for the purpose of catboost training """
@@ -231,18 +220,22 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # choose between regression, binary classification and multiclass classification
             label_type = analitico.schema.get_column_type(train_df, label)
+            self.info("Label column '%s' of type %s", label, label_type)
             if label_type == analitico.schema.ANALITICO_TYPE_CATEGORY:
                 label_classes = list(train_df[label].cat.categories)
                 results["data"]["classes"] = label_classes
                 train_df[label] = train_df[label].cat.codes
-                self.algorithm = (
+                results["algorithm"] = (
                     ALGORITHM_TYPE_BINARY_CLASSICATION
                     if len(label_classes) == 2
                     else ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION
                 )
-                self.info("Algorithm is %s with %d classes: %s", self.algorithm, label_classes)
+                self.info(
+                    "Algorithm is '%s' with %d classes: %s", results["algorithm"], len(label_classes), label_classes
+                )
             else:
-                self.algorithm = ALGORITHM_TYPE_REGRESSION
+                results["algorithm"] = ALGORITHM_TYPE_REGRESSION
+                self.info("Algorithm is '%s'", results["algorithm"])
 
             # remove rows with missing label from training and test sets
             train_rows = len(train_df)
@@ -324,7 +317,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # score test set, add related metrics to results
             self.score_training(model, test_df, test_pool, test_labels, results)
-            if self.algorithm == ALGORITHM_TYPE_REGRESSION:
+            if results["algorithm"] == ALGORITHM_TYPE_REGRESSION:
                 self.score_regressor_training(model, test_df, test_pool, test_labels, results)
             else:
                 self.score_classifier_training(model, test_df, test_pool, test_labels, results)
@@ -339,9 +332,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
             return results
 
         except Exception as exc:
-            self.error("error while training: %s", exc)
-            self.logger.exception(exc)
-            raise exc
+            self.exception("CatBoostPlugin - error while training: %s", str(exc), exception=exc)
 
     def predict(self, data, training, results, *args, **kwargs):
         """ Return predictions from trained model """
@@ -351,13 +342,39 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
         # create model object from stored file
         loading_on = time_ms()
-        model_filename = os.path.join(self.factory.get_artifacts_directory(), "model.cbm")
-        model = self.create_model()
-        model.load_model(model_filename)
+        model_path = os.path.join(self.factory.get_artifacts_directory(), "model.cbm")
+        if not os.path.isfile(model_path):
+            self.exception("CatBoostPlugin.predict - cannot find saved model in %s", model_path)
+
+        model = self.create_model(training)
+        model.load_model(model_path)
         results["performance"]["loading_ms"] = time_ms(loading_on)
 
-        # create predictions with assigned class and probabilities
-        predictions = model.predict(data_pool)
-        predictions = np.around(predictions, decimals=3)
-        results["predictions"] = list(predictions)
+        if training["algorithm"] == ALGORITHM_TYPE_REGRESSION:
+            y_predictions = model.predict(data_pool)
+            y_predictions = np.around(y_predictions, decimals=3)
+            results["predictions"] = list(y_predictions)
+
+        else:
+            # predict class and probabilities of each class
+            y_predictions = model.predict(
+                data_pool, prediction_type="Class"
+            )  # array di array of 1 element with class index
+            y_probabilities = model.predict(data_pool, prediction_type="Probability")  # array of array of probabilities
+            y_classes = training["data"]["classes"]  # list of possible classes
+
+            preds = results["predictions"] = []
+            probs = results["probabilities"] = []
+
+            # create predictions with assigned class and probabilities
+            if training["algorithm"] == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
+                for i in range(0, len(data)):
+                    preds.append(y_classes[int(y_predictions[i][0])])
+                    probs.append({y_classes[j]: y_probabilities[i][j] for j in range(0, len(y_classes))})
+
+            elif training["algorithm"] == ALGORITHM_TYPE_BINARY_CLASSICATION:
+                for i in range(0, len(data)):
+                    preds.append(y_classes[int(y_predictions[i])])
+                    probs.append({y_classes[0]: y_probabilities[i][0], y_classes[1]: y_probabilities[i][1]})
+
         return results
