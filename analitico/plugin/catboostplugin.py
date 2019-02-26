@@ -215,8 +215,6 @@ class CatBoostPlugin(IAlgorithmPlugin):
                 "precision": round(precision_scores[idx], 5),
                 "recall": round(recall_scores[idx], 5),
             }
-        # superclass will save test.csv
-        super().score_training(model, test_df, test_pool, test_labels, results)
 
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
@@ -327,9 +325,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
             # score test set, add related metrics to results
             self.score_training(model, test_df, test_pool, test_labels, results)
             if self.algorithm == ALGORITHM_TYPE_REGRESSION:
-                self.score_training(model, test_df, test_pool, test_labels, results)
+                self.score_regressor_training(model, test_df, test_pool, test_labels, results)
             else:
-                self.score_training(model, test_df, test_pool, test_labels, results)
+                self.score_classifier_training(model, test_df, test_pool, test_labels, results)
 
             # save model file and training results
             artifacts_path = self.factory.get_artifacts_directory()

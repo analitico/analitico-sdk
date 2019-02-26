@@ -194,6 +194,13 @@ def apply_schema(df: pd.DataFrame, schema):
             if "rename" in column:
                 rename[column["name"]] = column["rename"]
 
+    # if schema has a "drop" array then the columns
+    if "drop" in schema:
+        for column in schema["drop"]:
+            column_name = column.get("name")
+            if column_name and column_name in df.columns:
+                df.drop(columns=[column_name], inplace=True)
+
     # see if there are columns that need to be renamed
     if len(rename) > 0:
         df = df.rename(index=str, columns=rename)
