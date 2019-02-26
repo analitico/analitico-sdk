@@ -35,9 +35,10 @@ class IPlugin(ABC, AttributeMixin):
         assert self.Meta.name
         return self.Meta.name
 
-    def __init__(self, factory: IFactory, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.factory = factory
+        if "factory" in kwargs:
+            self.factory = kwargs["factory"]
 
     def activate(self, *args, **kwargs):
         """ Called when the plugin is initially activated """
@@ -113,14 +114,22 @@ class IDataframePlugin(IPlugin):
         started_on = time_ms()
         rows_before = len(df.index)
         if rows_before < 1:
-            self.warning("Can't drop rows where '%s' because dataframe is empty", condition_msg)
+            self.warning("Can't drop rows where '%s' because dataframe is empty", message)
             return df
         df.drop(df_dropped.index, inplace=True)
         if message:
             rows_after = len(df.index)
             rows_dropped = rows_before - rows_after
             msg = "Dropped rows where '%s', rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
-            self.info(msg, message, rows_before, rows_after, rows_dropped, (100.0 * rows_dropped) / rows_before, time_ms(started_on))
+            self.info(
+                msg,
+                message,
+                rows_before,
+                rows_after,
+                rows_dropped,
+                (100.0 * rows_dropped) / rows_before,
+                time_ms(started_on),
+            )
         return df
 
     def drop_na_rows(self, df, column):
@@ -134,7 +143,15 @@ class IDataframePlugin(IPlugin):
         rows_after = len(df.index)
         rows_dropped = rows_before - rows_after
         msg = "Dropped rows where '%s' is null, rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
-        self.info(msg, column, rows_before, rows_after, rows_dropped, (100.0 * rows_dropped) / rows_before, time_ms(started_on))
+        self.info(
+            msg,
+            column,
+            rows_before,
+            rows_after,
+            rows_dropped,
+            (100.0 * rows_dropped) / rows_before,
+            time_ms(started_on),
+        )
         return df
 
     def run(self, *args, action=None, **kwargs) -> pandas.DataFrame:
@@ -145,6 +162,12 @@ class IDataframePlugin(IPlugin):
 ##
 ## IAlgorithmPlugin - base class for machine learning algorithms that produce trained models
 ##
+
+ALGORITHM_TYPE_REGRESSION = "ml/regression"
+ALGORITHM_TYPE_BINARY_CLASSICATION = "ml/binary-classification"
+ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION = "ml/multiclass-classification"
+ALGORITHM_TYPE_ANOMALY_DETECTION = "ml/anomaly-detection"
+ALGORITHM_TYPE_CLUSTERING = "ml/clustering"
 
 
 class IAlgorithmPlugin(IPlugin):
@@ -257,13 +280,14 @@ class IGroupPlugin(IPlugin):
 
     plugins = []
 
-    def __init__(self, factory: IFactory, plugins, *args, **kwargs):
+    def __init__(self, *args, plugins=[], **kwargs):
         """ Initialize group and create all this plugin's children """
-        super().__init__(factory=factory, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.plugins = []
         for plugin in plugins:
             if isinstance(plugin, dict):
                 plugin = self.factory.get_plugin(**plugin)
+            plugin.factory = self.factory  # use same factory as parent plugin
             self.plugins.append(plugin)
 
 

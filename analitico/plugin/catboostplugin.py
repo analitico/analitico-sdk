@@ -1,16 +1,43 @@
 """ Regression and classification plugins based on CatBoost """
 
-import catboost
 import pandas as pd
+import numpy as np
 import os.path
+import collections
 
 from abc import abstractmethod
+
+import sklearn.metrics
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    mean_squared_error,
+    mean_absolute_error,
+    median_absolute_error,
+    accuracy_score,
+    precision_score,
+    recall_score,
+)
+
+import catboost
+from catboost import CatBoostClassifier, CatBoostRegressor, Pool
 
 from analitico.utilities import time_ms
-from analitico.schema import generate_schema
 
-from .interfaces import IAlgorithmPlugin, PluginError
+import analitico.schema
+from analitico.schema import (
+    generate_schema,
+    get_column_type,
+    ANALITICO_TYPE_CATEGORY,
+    ANALITICO_TYPE_INTEGER,
+    ANALITICO_TYPE_FLOAT,
+)
+from .interfaces import (
+    IAlgorithmPlugin,
+    PluginError,
+    ALGORITHM_TYPE_REGRESSION,
+    ALGORITHM_TYPE_BINARY_CLASSICATION,
+    ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
+)
 
 ##
 ## CatBoostPlugin
@@ -24,11 +51,44 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
     class Meta(IAlgorithmPlugin.Meta):
         name = "analitico.plugin.CatBoostPlugin"
+        algorithms = [
+            ALGORITHM_TYPE_REGRESSION,
+            ALGORITHM_TYPE_BINARY_CLASSICATION,
+            ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
+        ]
 
-    @abstractmethod
+    @property
+    def algorithm(self):
+        return self.get_attribute("algorithm")
+
+    @algorithm.setter
+    def algorithm(self, value):
+        self.set_attribute("algorithm", value)
+
     def create_model(self, results):
         """ Creates actual CatBoostClassifier or CatBoostRegressor model in subclass """
-        pass
+
+        iterations = self.get_attribute("parameters.iterations", 50)
+        learning_rate = self.get_attribute("parameters.learning_rate", 1)
+        depth = self.get_attribute("parameters.depth", 8)
+
+        if results:
+            results["parameters"]["iterations"] = iterations
+            results["parameters"]["learning_rate"] = learning_rate
+            results["parameters"]["depth"] = depth
+
+        if self.algorithm == ALGORITHM_TYPE_REGRESSION:
+            return CatBoostRegressor(iterations=iterations, learning_rate=learning_rate, depth=depth)
+        elif self.algorithm == ALGORITHM_TYPE_BINARY_CLASSICATION:
+            return CatBoostClassifier(
+                iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="Logloss"
+            )
+        elif self.algorithm == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
+            return CatBoostClassifier(
+                iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="MultiClass"
+            )
+        else:
+            raise PluginError("CatBoostPlugin.create_model - can't handle algorithm type: %s", self.algorithm)
 
     def get_categorical_idx(self, df):
         """ Return indexes of the columns that should be considered categorical for the purpose of catboost training """
@@ -99,6 +159,65 @@ class CatBoostPlugin(IAlgorithmPlugin):
         artifacts_path = self.factory.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
 
+    def score_regressor_training(self, model, test_df, test_pool, test_labels, results):
+        test_preds = model.predict(test_pool)
+        results["scores"]["median_abs_error"] = round(median_absolute_error(test_preds, test_labels), 5)
+        results["scores"]["mean_abs_error"] = round(mean_absolute_error(test_preds, test_labels), 5)
+        results["scores"]["sqrt_mean_squared_error"] = round(np.sqrt(mean_squared_error(test_preds, test_labels)), 5)
+
+    def score_classifier_training(self, model, test_df, test_pool, test_labels, results):
+        """ Scores the results of this training for the CatBoostClassifier model """
+        # There are many metrics available:
+        # https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics
+        scores = results["scores"]
+        train_classes = results["data"]["classes"]  # the classes (actual strings)
+        train_classes_codes = list(range(0, len(train_classes)))  # the codes, eg: 0, 1, 2...
+
+        test_true = list(test_labels)  # test true labels
+        test_preds = model.predict(test_pool, prediction_type="Class")  # prediction for each test sample
+        test_probs = model.predict_proba(test_pool, verbose=True)  # probability for each class for each sample
+
+        # Log loss, aka logistic loss or cross-entropy loss.
+        scores["log_loss"] = round(sklearn.metrics.log_loss(test_true, test_probs, labels=train_classes_codes), 5)
+
+        # In multilabel classification, this function computes subset accuracy:
+        # the set of labels predicted for a sample must exactly match the corresponding set of labels in y_true.
+        scores["accuracy_score"] = round(accuracy_score(test_true, test_preds), 5)
+
+        # The precision is the ratio tp / (tp + fp) where tp is the number of true positives
+        # and fp the number of false positives. The precision is intuitively the ability
+        # of the classifier not to label as positive a sample that is negative.
+        # The best value is 1 and the worst value is 0.
+        scores["precision_score_micro"] = round(precision_score(test_true, test_preds, average="micro"), 5)
+        scores["precision_score_macro"] = round(precision_score(test_true, test_preds, average="macro"), 5)
+        scores["precision_score_weighted"] = round(precision_score(test_true, test_preds, average="weighted"), 5)
+
+        # The recall is the ratio tp / (tp + fn) where tp is the number of true positives
+        # and fn the number of false negatives. The recall is intuitively the ability
+        # of the classifier to find all the positive samples.
+        scores["recall_score_micro"] = round(recall_score(test_true, test_preds, average="micro"), 5)
+        scores["recall_score_macro"] = round(recall_score(test_true, test_preds, average="macro"), 5)
+        scores["recall_score_weighted"] = round(recall_score(test_true, test_preds, average="weighted"), 5)
+
+        self.info("log_loss: %f", scores["log_loss"])
+        self.info("accuracy_score: %f", scores["accuracy_score"])
+        self.info("precision_score_micro: %f", scores["precision_score_micro"])
+        self.info("precision_score_macro: %f", scores["precision_score_macro"])
+
+        # Report precision and recall for each of the classes
+        scores["classes_scores"] = {}
+        count = collections.Counter(test_true)
+        precision_scores = precision_score(test_true, test_preds, average=None)
+        recall_scores = recall_score(test_true, test_preds, average=None)
+        for idx, val in enumerate(train_classes):
+            scores["classes_scores"][val] = {
+                "count": count[idx],
+                "precision": round(precision_scores[idx], 5),
+                "recall": round(recall_scores[idx], 5),
+            }
+        # superclass will save test.csv
+        super().score_training(model, test_df, test_pool, test_labels, results)
+
     def train(self, train, test, results, *args, **kwargs):
         """ Train with algorithm and given data to produce a trained model """
         try:
@@ -111,6 +230,21 @@ class CatBoostPlugin(IAlgorithmPlugin):
             if not label:
                 label = train_df.columns[len(train_df.columns) - 1]
             results["data"]["label"] = label
+
+            # choose between regression, binary classification and multiclass classification
+            label_type = analitico.schema.get_column_type(train_df, label)
+            if label_type == analitico.schema.ANALITICO_TYPE_CATEGORY:
+                label_classes = list(train_df[label].cat.categories)
+                results["data"]["classes"] = label_classes
+                train_df[label] = train_df[label].cat.codes
+                self.algorithm = (
+                    ALGORITHM_TYPE_BINARY_CLASSICATION
+                    if len(label_classes) == 2
+                    else ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION
+                )
+                self.info("Algorithm is %s with %d classes: %s", self.algorithm, label_classes)
+            else:
+                self.algorithm = ALGORITHM_TYPE_REGRESSION
 
             # remove rows with missing label from training and test sets
             train_rows = len(train_df)
@@ -192,6 +326,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # score test set, add related metrics to results
             self.score_training(model, test_df, test_pool, test_labels, results)
+            if self.algorithm == ALGORITHM_TYPE_REGRESSION:
+                self.score_training(model, test_df, test_pool, test_labels, results)
+            else:
+                self.score_training(model, test_df, test_pool, test_labels, results)
 
             # save model file and training results
             artifacts_path = self.factory.get_artifacts_directory()
@@ -206,3 +344,22 @@ class CatBoostPlugin(IAlgorithmPlugin):
             self.error("error while training: %s", exc)
             self.logger.exception(exc)
             raise exc
+
+    def predict(self, data, training, results, *args, **kwargs):
+        """ Return predictions from trained model """
+        # initialize data pool to be tested
+        categorical_idx = self.get_categorical_idx(data)
+        data_pool = catboost.Pool(data, cat_features=categorical_idx)
+
+        # create model object from stored file
+        loading_on = time_ms()
+        model_filename = os.path.join(self.factory.get_artifacts_directory(), "model.cbm")
+        model = self.create_model()
+        model.load_model(model_filename)
+        results["performance"]["loading_ms"] = time_ms(loading_on)
+
+        # create predictions with assigned class and probabilities
+        predictions = model.predict(data_pool)
+        predictions = np.around(predictions, decimals=3)
+        results["predictions"] = list(predictions)
+        return results
