@@ -301,3 +301,32 @@ class CatBoostTests(unittest.TestCase, TestMixin):
         except Exception as exc:
             factory.error("test_catboost_regressor - " + str(exc))
             pass
+
+    def test_catboost_regressor_prediction(self):
+        """ Test predictions with catboost as a regressor """
+        try:
+            with Factory() as factory:
+                boston_dataset = load_boston()
+                boston = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
+                boston["MEDV"] = boston_dataset.target
+
+                catboost = CatBoostPlugin(factory=factory, parameters={"learning_rate": 0.2})
+                training = catboost.run(boston, action="recipe/train")
+                self.assertIsNotNone(training)
+
+                boston_dataset = load_boston()
+                boston = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
+                boston_labels = boston_dataset.target
+                predict = catboost.run(boston, action="endpoint/predict")
+
+                # check to make sure predictions are from available labels
+                self.assertIn("predictions", predict)
+                self.assertEqual(len(predict["predictions"]), len(boston))
+
+                # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html
+                mae = sklearn.metrics.mean_absolute_error(boston_labels, predict["predictions"])
+                self.assertLessEqual(mae, 3)
+
+        except Exception as exc:
+            factory.error("test_catboost_regressor_prediction - " + str(exc))
+            pass
