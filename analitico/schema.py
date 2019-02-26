@@ -70,21 +70,26 @@ def analitico_to_pandas_type(data_type: str):
 
 def pandas_to_analitico_type(data_type):
     """ Return the analitico schema data type of a pandas dtype """
-    if data_type == "int":
-        return "integer"
+    if data_type == "int" or data_type == "int8":
+        return ANALITICO_TYPE_INTEGER
     if data_type == "float":
-        return "float"
+        return ANALITICO_TYPE_FLOAT
     if data_type == "bool":
-        return "boolean"
+        return ANALITICO_TYPE_BOOLEAN
     if data_type.name == "category":
-        return "category"  # dtype alone doesn't ==
+        return ANALITICO_TYPE_CATEGORY  # dtype alone doesn't ==
     if data_type == "object":
-        return "string"
+        return ANALITICO_TYPE_STRING
     if data_type == "datetime64[ns]":
-        return "datetime"
+        return ANALITICO_TYPE_DATETIME
     if data_type == "timedelta64[ns]":
-        return "timespan"
+        return ANALITICO_TYPE_TIMESPAN
     raise KeyError("_pandas_to_analitico_type - unknown data_type: " + str(data_type))
+
+
+def get_column_type(df, column):
+    """ Returns analitico's column type for the column with given name """
+    return pandas_to_analitico_type(df[column].dtype)
 
 
 def generate_schema(df: pd.DataFrame) -> dict:
@@ -99,52 +104,55 @@ def generate_schema(df: pd.DataFrame) -> dict:
     return {"columns": columns}
 
 
-def apply_type(df: pd.DataFrame, **kwargs):
+def apply_column(df: pd.DataFrame, column):
     """ Apply given type to the column (parameters are type, name, etc from schema column) """
     assert isinstance(df, pd.DataFrame)
+    assert "name" in column, "apply_column - should always be passed a column name"
+    column_name = column["name"]
 
-    # no type? no op, some schemas may only have partial information
-    if "type" not in kwargs:
-        return
-
-    cname = kwargs["name"]
-    ctype = kwargs["type"]
-
-    missing = cname not in df.columns
-    if ctype == "string":
-        if missing:
-            df[cname] = None
-        df[cname] = df[cname].astype(str)
-    elif ctype == "float":
-        if missing:
-            df[cname] = np.nan
-        df[cname] = df[cname].astype(float)
-    elif ctype == "boolean":
-        if missing:
-            df[cname] = False
-        df[cname] = df[cname].astype(bool)
-    elif ctype == "integer":
-        if missing:
-            df[cname] = 0
-        df[cname] = df[cname].astype(int)
-    elif ctype == "datetime":
-        if missing:
-            df[cname] = None
+    # we are being requested to apply type to the column
+    if "type" in column:
+        column_type = column["type"]
+        missing = column_name not in df.columns
+        if column_type == "string":
+            if missing:
+                df[column_name] = None
+            df[column_name] = df[column_name].astype(str)
+        elif column_type == "float":
+            if missing:
+                df[column_name] = np.nan
+            df[column_name] = df[column_name].astype(float)
+        elif column_type == "boolean":
+            if missing:
+                df[column_name] = False
+            df[column_name] = df[column_name].astype(bool)
+        elif column_type == "integer":
+            if missing:
+                df[column_name] = 0
+            df[column_name] = df[column_name].astype(int)
+        elif column_type == "datetime":
+            if missing:
+                df[column_name] = None
+            else:
+                # strings like no
+                for not_a_date in NA_DATES:
+                    df[column_name].replace(not_a_date, np.nan, inplace=True)
+            df[column_name] = df[column_name].astype("datetime64[ns]")
+        elif column_type == "timespan":
+            if missing:
+                df[column_name] = None
+            df[column_name] = pd.to_timedelta(df[column_name])
+        elif column_type == "category":
+            if missing:
+                df[column_name] = None
+            df[column_name] = df[column_name].astype("category")
         else:
-            # strings like no
-            for not_a_date in NA_DATES:
-                df[cname].replace(not_a_date, np.nan, inplace=True)
-        df[cname] = df[cname].astype("datetime64[ns]")
-    elif ctype == "timespan":
-        if missing:
-            df[cname] = None
-        df[cname] = pd.to_timedelta(df[cname])
-    elif ctype == "category":
-        if missing:
-            df[cname] = None
-        df[cname] = df[cname].astype("category")
-    else:
-        raise Exception("analitico.schema.apply_type - unknown type: " + ctype)
+            raise Exception("analitico.schema.apply_type - unknown type: " + column_type)
+
+    # make requested column index
+    index = column.get("index", False)
+    if index:
+        df.set_index(column_name, drop=False, inplace=True)
 
 
 def apply_schema(df: pd.DataFrame, schema):
@@ -156,26 +164,37 @@ def apply_schema(df: pd.DataFrame, schema):
     assert isinstance(df, pd.DataFrame), "apply_schema should be passed a pd.DataFrame, received: " + str(df)
     assert isinstance(schema, dict), "apply_schema should be passed a schema dictionary"
 
-    # select columns and apply types to columns
-    names = []
-    for column in schema["columns"]:
-        name = column["name"]
-        names.append(name)
-        apply_type(df, **column)
+    # columns that need renaming with old: new
+    rename = {}
 
-        # make requested column index
-        index = column.get("index", False)
-        if index:
-            df = df.set_index(name, drop=False)
+    # when a schema contains the 'columns' array, it means that we should
+    # apply the given columns transformations and end up with a dataframe
+    # containing only the given columns, ordered as specified. if the dataframe
+    # has any additional columns not listed in 'columns' they will be dropped.
+    if "columns" in schema:
+        # select columns and apply types to columns
+        names = []
+        for column in schema["columns"]:
+            name = column["name"]
+            names.append(name)
+            apply_column(df, column)
+            if "rename" in column:
+                rename[column["name"]] = column["rename"]
+        # reorder and remove extra columns
+        df = df[names]
 
-    # reorder and remove extra columns
-    df = df[names]
+    # when a schema contains the 'apply' array it means that we should
+    # apply the given column transformations to the dataframe. the array
+    # may or just one or a few columns, meaning all other columns are left
+    # as is. the order of items in 'apply' does not need to match the order
+    # in the dataframe
+    if "apply" in schema:
+        for column in schema["apply"]:
+            apply_column(df, column)
+            if "rename" in column:
+                rename[column["name"]] = column["rename"]
 
     # see if there are columns that need to be renamed
-    rename = {}
-    for column in schema["columns"]:
-        if "rename" in column:
-            rename[column["name"]] = column["rename"]
     if len(rename) > 0:
         df = df.rename(index=str, columns=rename)
 
