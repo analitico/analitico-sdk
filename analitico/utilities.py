@@ -288,13 +288,14 @@ def pd_augment_date(df, column):
     """ Splits a datetime column into year, month, day, dayofweek, hour, minute then removes the original column """
     loc = df.columns.get_loc(column) + 1
     # create separate columns for each parameter
-    df.insert(loc, column + ".minute", df[column].apply(lambda ts: ts.minute))
-    df.insert(loc, column + ".hour", df[column].apply(lambda ts: ts.hour))
-    df.insert(loc, column + ".day", df[column].apply(lambda ts: ts.day))
-    df.insert(loc, column + ".month", df[column].apply(lambda ts: ts.month))
-    df.insert(loc, column + ".year", df[column].apply(lambda ts: ts.year))
-    df.insert(loc, column + ".dayofweek", df[column].apply(lambda ts: ts.dayofweek))
-    df.drop([column], axis=1, inplace=True)
+    dates = pd.DatetimeIndex(df[column])
+    df.insert(loc + 1, column + ".year", dates.year.astype("category", copy=False))
+    df.insert(loc + 2, column + ".month", dates.month.astype("category", copy=False))
+    df.insert(loc + 3, column + ".day", dates.day.astype("category", copy=False))
+    df.insert(loc + 4, column + ".hour", dates.hour.astype("category", copy=False))
+    df.insert(loc + 5, column + ".minute", dates.minute.astype("category", copy=False))
+    df.insert(loc + 6, column + ".dayofweek", dates.dayofweek.astype("category", copy=False))
+    # df.drop([column], axis=1, inplace=True)
 
 
 def pd_timediff_min(df, column_start, column_end, column_diff):
