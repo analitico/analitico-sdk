@@ -3,7 +3,7 @@ Plugins that import dataframes from different sources
 """
 
 import pandas
-from analitico.utilities import get_dict_dot, pd_date_parser
+from analitico.utilities import get_dict_dot
 from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
 from .interfaces import IDataframeSourcePlugin, PluginError
 
@@ -18,7 +18,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
     class Meta(IDataframeSourcePlugin.Meta):
         name = "analitico.plugin.CsvDataframeSourcePlugin"
 
-    def run(self, *args, action=None, **kwargs):
+    def run(self, *args, **kwargs):
         """ Creates a pandas dataframe from the csv source """
         try:
             url = self.get_attribute("source.url")
@@ -40,7 +40,7 @@ class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
             dtype = None
             if columns:
                 dtype = {}
-                for idx, column in enumerate(columns):
+                for column in columns:
                     if "type" in column:  # type is optionally defined
                         if column["type"] == "datetime":
                             dtype[column["name"]] = "object"

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from analitico.schema import apply_schema
-from .interfaces import IDataframePlugin, PluginError
+from .interfaces import IDataframePlugin
 
 ##
 ## TransformDataframePlugin
@@ -27,7 +27,8 @@ class TransformDataframePlugin(IDataframePlugin):
                 "name": "schema",
                 "type": "analitico/schema",
                 "optional": False,
-                "description": "The schema is applied to the input dataframe. The choice and attributes of columns indicate how they are filtered, ordered, cast, etc.",
+                "description": "The schema is applied to the input dataframe. The choice and attributes "
+                + "of columns indicate how they are filtered, ordered, cast, etc.",
             }
         ]
 

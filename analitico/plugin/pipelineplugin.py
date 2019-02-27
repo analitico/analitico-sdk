@@ -5,7 +5,6 @@ process data and create a machine learning model.
 """
 
 import pandas as pd
-from django.conf import settings
 from analitico.utilities import time_ms
 from analitico.schema import pandas_to_analitico_type
 

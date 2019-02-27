@@ -196,7 +196,6 @@ class CatBoostTests(unittest.TestCase, TestMixin):
             factory.error("test_catboost_multiclass_classifier - " + str(exc))
             pass
 
-
     def test_catboost_multiclass_classifier_training_classification_report(self):
         try:
             with Factory() as factory:
@@ -222,8 +221,6 @@ class CatBoostTests(unittest.TestCase, TestMixin):
         except Exception as exc:
             factory.error("test_catboost_multiclass_classifier_training_classification_report - " + str(exc))
             pass
-
-
 
     def test_catboost_multiclass_classifier_prediction(self):
         """ Test predictions with catboost as a binary classifier """

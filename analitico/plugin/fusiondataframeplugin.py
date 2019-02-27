@@ -1,7 +1,7 @@
 import pandas as pd
 
 from analitico.utilities import pd_columns_to_string
-from .interfaces import IPlugin, PluginError, IDataframePlugin
+from .interfaces import PluginError, IDataframePlugin
 from .pipelineplugin import PipelinePlugin
 
 ##

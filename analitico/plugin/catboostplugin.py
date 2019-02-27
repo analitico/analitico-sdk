@@ -3,9 +3,6 @@
 import pandas as pd
 import numpy as np
 import os.path
-import collections
-
-from abc import abstractmethod
 
 import sklearn.metrics
 from sklearn.model_selection import train_test_split
@@ -17,22 +14,16 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     classification_report,
-    confusion_matrix
+    confusion_matrix,
 )
 
 import catboost
-from catboost import CatBoostClassifier, CatBoostRegressor, Pool
+from catboost import CatBoostClassifier, CatBoostRegressor
 
 from analitico.utilities import time_ms
 
 import analitico.schema
-from analitico.schema import (
-    generate_schema,
-    get_column_type,
-    ANALITICO_TYPE_CATEGORY,
-    ANALITICO_TYPE_INTEGER,
-    ANALITICO_TYPE_FLOAT,
-)
+from analitico.schema import generate_schema, ANALITICO_TYPE_CATEGORY, ANALITICO_TYPE_INTEGER, ANALITICO_TYPE_FLOAT
 from .interfaces import (
     IAlgorithmPlugin,
     PluginError,
@@ -108,7 +99,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     )
                     raise PluginError(msg)
                 if train_columns[i]["type"] != test_columns[i]["type"]:
-                    msg = "- column %d of train '%s' and test '%s' have different names".format(
+                    msg = "{} - column {} of train '{}' and test '{}' have different names".format(
                         self.name, i, train_columns[i]["type"], test_columns[i]["type"]
                     )
                     raise PluginError(msg)
@@ -198,7 +189,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
         # complete classification report and confusion matrix
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html#sklearn.metrics.classification_report
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html#sklearn.metrics.confusion_matrix
-        scores["classification_report"] = classification_report(test_true, test_preds, target_names=results["data"]["classes"], output_dict=True)
+        scores["classification_report"] = classification_report(
+            test_true, test_preds, target_names=results["data"]["classes"], output_dict=True
+        )
         scores["confusion_matrix"] = confusion_matrix(test_true, test_preds).tolist()
 
     def train(self, train, test, results, *args, **kwargs):
@@ -388,10 +381,10 @@ class CatBoostRegressorPlugin(CatBoostPlugin):
         name = "analitico.plugin.CatBoostRegressorPlugin"
         algorithms = [ALGORITHM_TYPE_REGRESSION]
 
+
 ##
 ## CatBoostClassifierPlugin
 ##
-
 
 
 class CatBoostClassifierPlugin(CatBoostPlugin):
@@ -399,7 +392,4 @@ class CatBoostClassifierPlugin(CatBoostPlugin):
 
     class Meta(CatBoostPlugin.Meta):
         name = "analitico.plugin.CatBoostClassifierPlugin"
-        algorithms = [
-            ALGORITHM_TYPE_BINARY_CLASSICATION,
-            ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
-        ]
+        algorithms = [ALGORITHM_TYPE_BINARY_CLASSICATION, ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION]
