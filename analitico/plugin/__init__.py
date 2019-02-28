@@ -8,6 +8,7 @@ from .interfaces import PluginError  # NOQA: F401
 
 # plugins to generate dataframes from sources
 from .csvdataframesourceplugin import CsvDataframeSourcePlugin
+from .datasetsourceplugin import DatasetSourcePlugin
 
 # plugins to tranform dataframes
 from .transforms import CodeDataframePlugin
@@ -27,6 +28,7 @@ from .recipepipelineplugin import RecipePipelinePlugin
 from .endpointpipelineplugin import EndpointPipelinePlugin
 
 CSV_DATAFRAME_SOURCE_PLUGIN = CsvDataframeSourcePlugin.Meta.name
+DATASET_SOURCE_PLUGIN = DatasetSourcePlugin.Meta.name
 CODE_DATAFRAME_PLUGIN = CodeDataframePlugin.Meta.name
 AUGMENT_DATES_PLUGIN = AugmentDatesPlugin.Meta.name
 FUSION_DATAFRAME_PLUGIN = FusionDataframePlugin.Meta.name

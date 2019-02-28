@@ -63,7 +63,11 @@ class CatBoostPlugin(IAlgorithmPlugin):
             return CatBoostRegressor(iterations=iterations, learning_rate=learning_rate, depth=depth)
         elif results["algorithm"] == ALGORITHM_TYPE_BINARY_CLASSICATION:
             return CatBoostClassifier(
-                iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="Logloss"
+                iterations=iterations,
+                learning_rate=learning_rate,
+                depth=depth,
+                loss_function="Logloss",
+                task_type="GPU",
             )
         elif results["algorithm"] == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
             return CatBoostClassifier(
@@ -75,9 +79,13 @@ class CatBoostPlugin(IAlgorithmPlugin):
     def get_categorical_idx(self, df):
         """ Return indexes of the columns that should be considered categorical for the purpose of catboost training """
         categorical_idx = []
-        for column in df.columns:
-            if df[column].dtype.name == "category":
-                categorical_idx.append(df.columns.get_loc(column))
+        for i, column in enumerate(df.columns):
+            if analitico.schema.get_column_type(df, column) is analitico.schema.ANALITICO_TYPE_CATEGORY:
+                categorical_idx.append(i)
+                df[column].replace(np.nan, "", regex=True, inplace=True)
+                self.info("%3d %s (%s/categorical)", i, column, df[column].dtype.name)
+            else:
+                self.info("%3d %s (%s)", i, column, df[column].dtype.name)
         return categorical_idx
 
     def validate_schema(self, train_df, test_df):
@@ -181,10 +189,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
         scores["recall_score_macro"] = round(recall_score(test_true, test_preds, average="macro"), 5)
         scores["recall_score_weighted"] = round(recall_score(test_true, test_preds, average="weighted"), 5)
 
-        self.info("Log_loss: %f", scores["log_loss"])
-        self.info("Accuracy_score: %f", scores["accuracy_score"])
-        self.info("Precision_score_micro: %f", scores["precision_score_micro"])
-        self.info("Precision_score_macro: %f", scores["precision_score_macro"])
+        self.info("log_loss: %f", scores["log_loss"])
+        self.info("accuracy_score: %f", scores["accuracy_score"])
+        self.info("precision_score_micro: %f", scores["precision_score_micro"])
+        self.info("precision_score_macro: %f", scores["precision_score_macro"])
 
         # complete classification report and confusion matrix
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html#sklearn.metrics.classification_report
@@ -192,6 +200,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
         scores["classification_report"] = classification_report(
             test_true, test_preds, target_names=results["data"]["classes"], output_dict=True
         )
+        report = classification_report(test_true, test_preds, target_names=results["data"]["classes"])
+        self.info(report)
+
         scores["confusion_matrix"] = confusion_matrix(test_true, test_preds).tolist()
 
     def train(self, train, test, results, *args, **kwargs):
@@ -209,7 +220,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # choose between regression, binary classification and multiclass classification
             label_type = analitico.schema.get_column_type(train_df, label)
-            self.info("Label column '%s' of type %s", label, label_type)
+            self.info("label: %s", label)
+            self.info("label_type: %s", label_type)
             if label_type == analitico.schema.ANALITICO_TYPE_CATEGORY:
                 label_classes = list(train_df[label].cat.categories)
                 results["data"]["classes"] = label_classes
@@ -219,12 +231,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     if len(label_classes) == 2
                     else ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION
                 )
-                self.info(
-                    "Algorithm: '%s' with %d classes: %s", results["algorithm"], len(label_classes), label_classes
-                )
+                self.info("classes: %s", label_classes)
             else:
                 results["algorithm"] = ALGORITHM_TYPE_REGRESSION
-                self.info("Algorithm: '%s'", results["algorithm"])
+            self.info("algorithm: %s", results["algorithm"])
 
             # remove rows with missing label from training and test sets
             train_rows = len(train_df)
@@ -265,8 +275,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
                     self.info("Test set split: random")
                     train_df, test_df, = train_test_split(train_df, test_size=test_size, random_state=42)
 
-            self.info("training set %d rows", len(train_df))
-            self.info("test set %d rows", len(test_df))
+            self.info("training: %d rows", len(train_df))
+            self.info("testing: %d rows", len(test_df))
 
             # validate data types
             for column in train_schema["columns"]:
@@ -285,7 +295,15 @@ class CatBoostPlugin(IAlgorithmPlugin):
             results["data"]["dropped_records"] = len(train) - len(train_df) - len(test_df)
 
             # save some training data for debugging
-            # train_df.tail(500).to_json("/home/xxx/xxx.json", orient="records")
+            artifacts_path = self.factory.get_artifacts_directory()
+            num_samples = min(200, len(train_df))
+            samples_df = train_df.sample(n=num_samples)
+            samples_path = os.path.join(artifacts_path, "training-samples.json")
+            samples_df.to_json(samples_path, orient="records")
+            self.info("saved: %s (%d bytes)", samples_path, os.path.getsize(samples_path))
+            samples_path = os.path.join(artifacts_path, "training-samples.csv")
+            samples_df.to_csv(samples_path)
+            self.info("saved: %s (%d bytes)", samples_path, os.path.getsize(samples_path))
 
             # split data and labels
             train_labels = train_df[label]
@@ -312,11 +330,10 @@ class CatBoostPlugin(IAlgorithmPlugin):
                 self.score_classifier_training(model, test_df, test_pool, test_labels, results)
 
             # save model file and training results
-            artifacts_path = self.factory.get_artifacts_directory()
             model_path = os.path.join(artifacts_path, "model.cbm")
             model.save_model(model_path)
             results["scores"]["model_size"] = os.path.getsize(model_path)
-            self.info("Saved: %s (%d bytes)", model_path, os.path.getsize(model_path))
+            self.info("saved: %s (%d bytes)", model_path, os.path.getsize(model_path))
 
             return results
 

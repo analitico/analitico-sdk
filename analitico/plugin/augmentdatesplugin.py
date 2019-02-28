@@ -1,6 +1,5 @@
 import pandas as pd
-
-import analitico.utilities
+import analitico.pandas
 import analitico.schema
 
 from .interfaces import IDataframePlugin
@@ -42,8 +41,8 @@ class AugmentDatesPlugin(IDataframePlugin):
                             try:
                                 column_name = column["name"]
                                 if column["name"] in df:
-                                    analitico.utilities.pd_cast_datetime(df, column_name)
-                                    analitico.utilities.pd_augment_date(df, column_name)
+                                    analitico.pandas.pd_cast_datetime(df, column_name)
+                                    analitico.pandas.pd_augment_date(df, column_name)
                             except Exception as exc:
                                 self.exception(ERROR_WHILE_AUGMENTING_COL, column_name, exception=exc)
 
@@ -53,7 +52,7 @@ class AugmentDatesPlugin(IDataframePlugin):
                     # if schema was not specified just scan all columns and expand those that are datetime
                     for column in df.columns:
                         if df[column].dtype.name == analitico.schema.PD_TYPE_DATETIME:
-                            analitico.utilities.pd_augment_date(df, column)
+                            analitico.pandas.pd_augment_date(df, column)
             return df
         except Exception as exc:
             self.exception(ERROR_WHILE_AUGMENTING, exception=exc)

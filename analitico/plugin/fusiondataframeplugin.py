@@ -1,6 +1,6 @@
 import pandas as pd
 
-from analitico.utilities import pd_columns_to_string
+from analitico.pandas import pd_columns_to_string
 from .interfaces import PluginError, IDataframePlugin
 from .pipelineplugin import PipelinePlugin
 

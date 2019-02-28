@@ -26,6 +26,8 @@ try:
 except Exception:
     pass
 
+from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
+
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
 
@@ -183,28 +185,26 @@ def time_ms(started_on=None):
     return datetime.now() if started_on is None else int((datetime.now() - started_on).total_seconds() * 1000)
 
 
+# https://docs.python.org/2/library/functools.html
 # used as @timeit decorator
 # https://medium.com/pythonhive/python-decorator-to-measure-the-execution-time-of-methods-fa04cb6bb36d
 def timeit(method):
-    def timed(*args, **kw):
+    def timed(*args, **kwargs):
         ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        if "log_time" in kw:
-            name = kw.get("log_name", method.__name__.upper())
-            kw["log_time"][name] = int((te - ts) * 1000)
+        result = method(*args, **kwargs)
+        ms = int((time.time() - ts) * 1000)
+
+        # if self has logger, log to it
+        if hasattr(args[0], 'logger'):
+            try:
+                args[0].logger.info("%s in %d ms", method.__name__.lower(), ms)
+            except:
+                pass
         else:
-            print("%r  %2.2f ms", method.__name__, (te - ts) * 1000)
+            print("%s in %d ms", method.__name__.lower(), ms)
+
         return result
-
     return timed
-
-
-def time_it(code):
-    """ Returns the time elapsed to execute the given call in ms """
-    started_on = datetime.now()
-    code()
-    return int((datetime.now() - started_on).total_seconds() * 1000)
 
 
 ##
@@ -262,54 +262,6 @@ def set_dict_dot(d: dict, key: str, value=None):
         if not (subkey in d):
             d[subkey] = None
         set_dict_dot(d[subkey], key[len(subkey) + 1 :], value)
-
-
-##
-## Pandas utilities
-##
-
-
-def pd_date_parser(x):
-    if not x:
-        return None
-    lower_x = x.lower()
-    if lower_x in ("none", "null", "nan", "empty"):
-        return None
-    date = dateutil.parser.parser(x)
-    return date
-
-
-def pd_cast_datetime(df, column):
-    """ Casts a string column to a date column, assumes format is recognizable """
-    df[column] = pd.to_datetime(df[column], infer_datetime_format=True, errors="coerce")
-
-
-def pd_augment_date(df, column):
-    """ Splits a datetime column into year, month, day, dayofweek, hour, minute then removes the original column """
-    loc = df.columns.get_loc(column) + 1
-    # create separate columns for each parameter
-    dates = pd.DatetimeIndex(df[column])
-    df.insert(loc + 1, column + ".year", dates.year.astype("category", copy=False))
-    df.insert(loc + 2, column + ".month", dates.month.astype("category", copy=False))
-    df.insert(loc + 3, column + ".day", dates.day.astype("category", copy=False))
-    df.insert(loc + 4, column + ".hour", dates.hour.astype("category", copy=False))
-    df.insert(loc + 5, column + ".minute", dates.minute.astype("category", copy=False))
-    df.insert(loc + 6, column + ".dayofweek", dates.dayofweek.astype("category", copy=False))
-    # df.drop([column], axis=1, inplace=True)
-
-
-def pd_timediff_min(df, column_start, column_end, column_diff):
-    """ Creates a new column with difference in minutes between the two named columns """
-    pd_cast_datetime(df, column_start)
-    pd_cast_datetime(df, column_end)
-    df[column_diff] = df[column_end] - df[column_start]
-    df[column_diff] = df[column_diff].dt.total_seconds() / 60.0
-
-
-def pd_columns_to_string(df):
-    """ Returns a single string with a list of columns, eg: 'col1', 'col2', 'col3' """
-    columns = "".join("'" + column + "', " for column in df.columns)
-    return columns[:-2]
 
 
 ##
