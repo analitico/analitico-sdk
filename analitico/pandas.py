@@ -13,6 +13,7 @@ import sys
 import random
 import string
 import dateutil
+from io import StringIO
 
 from django.conf import settings
 from datetime import datetime
@@ -104,3 +105,11 @@ def pd_drop_column(df, column, inplace=False):
     """ Drops a column, no exceptions if it's not there """
     if df and column in df:
         df.drop([column], axis=1, inplace=inplace)
+
+def pd_to_dict(df):
+    """ Convert a dataframe to json, encodes all dates and timestamps to ISO8601 """
+    assert isinstance(df, pd.DataFrame), "pd_to_dict - requires a pd.DataFrame"
+    with StringIO() as io:
+        df.to_json(io, orient="records", date_format="iso", date_unit="s", double_precision=6)
+        io.seek(0)
+        return json.load(io)
