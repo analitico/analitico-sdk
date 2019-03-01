@@ -228,8 +228,13 @@ class IAlgorithmPlugin(IPlugin):
         results = collections.OrderedDict(
             {
                 "type": "analitico/prediction",
-                "records": None,  # data may be returned along with predictions
+                "endpoint_id": None,
+                "model_id": None,
+                "job_id": None,
+                "records": None,  # original data
+                "processed": None,  # processed (augmented) data
                 "predictions": None,  # predictions
+                "probabilities": None,
                 "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
             }
         )

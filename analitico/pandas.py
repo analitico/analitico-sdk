@@ -101,10 +101,12 @@ def pd_read_csv(filepath_or_buffer, schema=None):
         df = analitico.schema.apply_schema(df, schema)
     return df
 
+
 def pd_drop_column(df, column, inplace=False):
     """ Drops a column, no exceptions if it's not there """
     if df and column in df:
         df.drop([column], axis=1, inplace=inplace)
+
 
 def pd_to_dict(df):
     """ Convert a dataframe to json, encodes all dates and timestamps to ISO8601 """

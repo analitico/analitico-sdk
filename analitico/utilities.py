@@ -195,7 +195,7 @@ def timeit(method):
         ms = int((time.time() - ts) * 1000)
 
         # if self has logger, log to it
-        if hasattr(args[0], 'logger'):
+        if hasattr(args[0], "logger"):
             try:
                 args[0].logger.info("%s in %d ms", method.__name__.lower(), ms)
             except:
@@ -204,6 +204,7 @@ def timeit(method):
             print("%s in %d ms", method.__name__.lower(), ms)
 
         return result
+
     return timed
 
 

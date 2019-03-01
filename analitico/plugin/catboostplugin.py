@@ -59,9 +59,11 @@ class CatBoostPlugin(IAlgorithmPlugin):
             results["parameters"]["iterations"] = iterations
             results["parameters"]["learning_rate"] = learning_rate
             results["parameters"]["depth"] = depth
-        if results["algorithm"] == ALGORITHM_TYPE_REGRESSION:
+
+        algo = results.get("algorithm", ALGORITHM_TYPE_REGRESSION)
+        if algo == ALGORITHM_TYPE_REGRESSION:
             return CatBoostRegressor(iterations=iterations, learning_rate=learning_rate, depth=depth)
-        elif results["algorithm"] == ALGORITHM_TYPE_BINARY_CLASSICATION:
+        elif algo == ALGORITHM_TYPE_BINARY_CLASSICATION:
             return CatBoostClassifier(
                 iterations=iterations,
                 learning_rate=learning_rate,
@@ -69,7 +71,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
                 loss_function="Logloss",
                 task_type="GPU",
             )
-        elif results["algorithm"] == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
+        elif algo == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
             return CatBoostClassifier(
                 iterations=iterations, learning_rate=learning_rate, depth=depth, loss_function="MultiClass"
             )
@@ -356,7 +358,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
         model.load_model(model_path)
         results["performance"]["loading_ms"] = time_ms(loading_on)
 
-        if training["algorithm"] == ALGORITHM_TYPE_REGRESSION:
+        algo = training.get("algorithm", ALGORITHM_TYPE_REGRESSION)
+        if algo == ALGORITHM_TYPE_REGRESSION:
             y_predictions = model.predict(data_pool)
             y_predictions = np.around(y_predictions, decimals=3)
             results["predictions"] = list(y_predictions)
@@ -373,12 +376,12 @@ class CatBoostPlugin(IAlgorithmPlugin):
             probs = results["probabilities"] = []
 
             # create predictions with assigned class and probabilities
-            if training["algorithm"] == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
+            if algo == ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION:
                 for i in range(0, len(data)):
                     preds.append(y_classes[int(y_predictions[i][0])])
                     probs.append({y_classes[j]: y_probabilities[i][j] for j in range(0, len(y_classes))})
 
-            elif training["algorithm"] == ALGORITHM_TYPE_BINARY_CLASSICATION:
+            elif algo == ALGORITHM_TYPE_BINARY_CLASSICATION:
                 for i in range(0, len(data)):
                     preds.append(y_classes[int(y_predictions[i])])
                     probs.append({y_classes[0]: y_probabilities[i][0], y_classes[1]: y_probabilities[i][1]})

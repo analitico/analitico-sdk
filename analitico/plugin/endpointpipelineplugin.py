@@ -2,6 +2,7 @@ import os
 import os.path
 import pandas as pd
 
+import analitico.pandas
 from analitico.utilities import read_json, get_dict_dot
 
 from .pipelineplugin import PipelinePlugin
@@ -26,22 +27,25 @@ class EndpointPipelinePlugin(PipelinePlugin):
     def run(self, *args, action=None, **kwargs):
         """ Process the plugins in sequence to run predictions """
         try:
-            assert isinstance(args[0], pd.DataFrame)
-            data_df = args[0]
-
-            # read training information from disk
-            artifacts_path = self.factory.get_artifacts_directory()
-            training_path = os.path.join(artifacts_path, "training.json")
-            training = read_json(training_path)
-            assert training
-
             # if no plugins have been configured for the pipeline,
             # create the plugin suggested by the training algorithm
             if not self.plugins:
+                # read training information from disk
+                artifacts_path = self.factory.get_artifacts_directory()
+                training_path = os.path.join(artifacts_path, "training.json")
+                training = read_json(training_path)
+                assert training
                 self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
 
+            assert isinstance(args[0], pd.DataFrame)
+            df = args[0]
+            df_copy = df.copy()
+
             # run the pipeline, return predictions
-            predictions = super().run(data_df, action=action, **kwargs)
+            predictions = super().run(df, action=action, **kwargs)
+            predictions["records"] = analitico.pandas.pd_to_dict(df_copy)
+            predictions["processed"] = analitico.pandas.pd_to_dict(df)
+
             return predictions
 
         except Exception as exc:
