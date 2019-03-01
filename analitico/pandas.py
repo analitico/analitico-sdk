@@ -98,5 +98,9 @@ def pd_read_csv(filepath_or_buffer, schema=None):
     if schema:
         # reorder, filter, apply types, rename columns as requested in schema
         df = analitico.schema.apply_schema(df, schema)
-
     return df
+
+def pd_drop_column(df, column, inplace=False):
+    """ Drops a column, no exceptions if it's not there """
+    if df and column in df:
+        df.drop([column], axis=1, inplace=inplace)
