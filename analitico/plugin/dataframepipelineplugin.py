@@ -4,12 +4,14 @@ import os
 
 from analitico.schema import generate_schema
 from .pipelineplugin import PipelinePlugin
+from .interfaces import plugin
 
 ##
 ## DataframePipelinePlugin
 ##
 
 
+@plugin
 class DataframePipelinePlugin(PipelinePlugin):
     """ 
     A ETL pipeline plugin that creates a linear workflow by chaining together other plugins 

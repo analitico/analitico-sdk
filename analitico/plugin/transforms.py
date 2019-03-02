@@ -1,12 +1,13 @@
 import pandas
 
-from .interfaces import IDataframePlugin, PluginError
+from .interfaces import IDataframePlugin, PluginError, plugin
 
 ##
 ## CodeDataframePlugin
 ##
 
 
+@plugin
 class CodeDataframePlugin(IDataframePlugin):
     """
     A plugin that can apply some generic python code to a dataframe and return it.

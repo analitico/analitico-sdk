@@ -4,13 +4,14 @@ import analitico.utilities
 from analitico.constants import ACTION_TRAIN
 from analitico.utilities import time_ms, timeit
 
-from .interfaces import IDataframeSourcePlugin
+from .interfaces import IDataframeSourcePlugin, plugin
 
 ##
 ## DatasetSourcePlugin
 ##
 
 
+@plugin
 class DatasetSourcePlugin(IDataframeSourcePlugin):
     """ A plugin that returns data from an analitico dataset """
 

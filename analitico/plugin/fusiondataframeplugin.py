@@ -2,7 +2,7 @@ import pandas as pd
 
 from analitico.pandas import pd_columns_to_string
 from .interfaces import PluginError, IDataframePlugin
-from .pipelineplugin import PipelinePlugin
+from .pipelineplugin import PipelinePlugin, plugin
 
 ##
 ## FusionDataframePlugin
@@ -21,6 +21,7 @@ ERROR_NO_RIGHT_COLUMN = (
 ERROR_NO_MERGE_CONF = "You need to specify how to merge dataframes either with the 'on' attribute or with the 'left_on' and 'right_on' attributes indicating the column names"
 
 
+@plugin
 class FusionDataframePlugin(PipelinePlugin):
     """ 
     A plugin used to merge two datasources using specific merge rules.

@@ -1,13 +1,17 @@
 import os
 import os.path
 import hashlib
+import inspect
 
 from abc import abstractmethod
 from .mixin import AttributeMixin
 
 
 class IFactory(AttributeMixin):
-    """ A base abstract class providing runtime services like items and plugin creation, etc """
+    """ A base abstract class providing runtime services like items and plugin creation, storage, network, etc """
+
+    # dictionary of registered plugins name:class
+    __plugins = {}
 
     @property
     def token(self):
@@ -76,10 +80,34 @@ class IFactory(AttributeMixin):
     ## Plugins
     ##
 
-    @abstractmethod
     def get_plugin(self, name: str, scope=None, **kwargs):
-        """ A factory method that creates a plugin from its name and settings (builder pattern) """
-        pass
+        """
+        Create a plugin given its name and the environment it will run in.
+        Any additional parameters passed to this method will be passed to the
+        plugin initialization code and will be stored as a plugin setting.
+        """
+        try:
+            # deprecated, temporary retrocompatibility 2019-02-24
+            if name == "analitico.plugin.AugmentDatesDataframePlugin":
+                name = "analitico.plugin.AugmentDatesPlugin"
+            if name not in IFactory.__plugins:
+                self.exception("IFactory.get_plugin - %s is not a registered plugin", name)
+            return (IFactory.__plugins[name])(factory=self, **kwargs)
+        except Exception as exc:
+            self.exception("IFactory.get_plugin - error while creating " + name, exception=exc)
+
+    def get_plugins(self):
+        """ Returns a list of registered plugin classes """
+        return IFactory.__plugins
+
+    @staticmethod
+    def register_plugin(plugin):
+        if inspect.isabstract(plugin):
+            print("IFactory.register_plugin: %s is abstract and cannot be registered" % plugin.Meta.name)
+            return
+        if not plugin.Meta.name in IFactory.__plugins:
+            IFactory.__plugins[plugin.Meta.name] = plugin
+            print("Plugin: %s registered" % plugin.Meta.name)
 
     ##
     ## Factory methods
@@ -109,13 +137,16 @@ class IFactory(AttributeMixin):
         pass
 
     def info(self, msg, *args, plugin=None, **kwargs):
-        self.logger.info(msg, *args, **kwargs)
+        if self.logger:
+            self.logger.info(msg, *args, **kwargs)
 
     def warning(self, msg, *args, plugin=None, **kwargs):
-        self.logger.warning(msg, *args, **kwargs)
+        if self.logger:
+            self.logger.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, plugin=None, exception=None):
-        self.logger.error(msg, *args, exc_info=exception)
+        if self.logger:
+            self.logger.error(msg, *args, exc_info=exception)
 
     def exception(self, msg, *args, plugin=None, exception=None):
         msg = msg % (args)

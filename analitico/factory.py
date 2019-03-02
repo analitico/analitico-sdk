@@ -131,47 +131,6 @@ class Factory(IFactory):
         return json.load(url_stream, encoding="utf-8")
 
     ##
-    ## Plugins
-    ##
-
-    def _get_class_from_fully_qualified_name(self, name, module=None, scope=globals()):
-        """ Gets a class from its fully qualified name, eg: package.module.Class """
-        assert name and isinstance(name, str)
-        try:
-            if name:
-                split = name.split(".")
-                if len(split) > 1:
-                    prefix = split[0]
-                    name = name[len(split[0]) + 1 :]
-                    module = getattr(module, prefix) if module else scope[prefix]
-                    return self._get_class_from_fully_qualified_name(name, module)
-                return getattr(module, split[0])
-        except Exception:
-            pass
-        return None
-
-    def get_plugin(self, name: str, scope=globals(), **kwargs):
-        """
-        Create a plugin given its name and the environment it will run in.
-        Any additional parameters passed to this method will be passed to the
-        plugin initialization code and will be stored as a plugin setting.
-        """
-        try:
-            # deprecated, temporary retrocompatibility 2019-02-24
-            if name == "analitico.plugin.AugmentDatesDataframePlugin":
-                name = "analitico.plugin.AugmentDatesPlugin"
-
-            assert name and isinstance(name, str)
-            klass = self._get_class_from_fully_qualified_name(name, scope=scope)
-            if not klass:
-                raise analitico.plugin.PluginError("Factory - can't find plugin: " + name)
-            return (klass)(factory=self, **kwargs)
-        except Exception as exc:
-            message = "Factory.get_plugin - can't create " + name
-            self.warning(message, exception=exc)
-            raise PluginError(message)
-
-    ##
     ## Factory methods
     ##
 
@@ -225,6 +184,8 @@ class Factory(IFactory):
     def logger(self):
         """ A logger that should be used for tracing """
         return analitico.utilities.logger
+
+    # remaning info, warning, error and exception methods are defined in IFactory...
 
     ##
     ## with Factory as: lifecycle methods

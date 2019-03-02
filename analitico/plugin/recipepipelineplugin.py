@@ -3,7 +3,7 @@ import os.path
 import pandas as pd
 
 from .interfaces import PluginError
-from .pipelineplugin import PipelinePlugin
+from .pipelineplugin import PipelinePlugin, plugin
 
 import analitico.constants
 import analitico.pandas
@@ -14,6 +14,7 @@ from analitico.utilities import read_json
 ##
 
 
+@plugin
 class RecipePipelinePlugin(PipelinePlugin):
     """
     A recipe pipeline contains:

@@ -5,6 +5,7 @@ import pandas as pd
 import analitico.pandas
 from analitico.utilities import read_json, get_dict_dot
 
+from .interfaces import plugin
 from .pipelineplugin import PipelinePlugin
 
 ##
@@ -12,6 +13,7 @@ from .pipelineplugin import PipelinePlugin
 ##
 
 
+@plugin
 class EndpointPipelinePlugin(PipelinePlugin):
     """
     EndpointPipelinePlugin is a base class for endpoints that take trained machine

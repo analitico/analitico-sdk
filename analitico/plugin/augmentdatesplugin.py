@@ -2,7 +2,7 @@ import pandas as pd
 import analitico.pandas
 import analitico.schema
 
-from .interfaces import IDataframePlugin
+from .interfaces import IDataframePlugin, plugin
 
 ##
 ## AugmentDatesPlugin - dataframe in, dataframe out with better dates
@@ -13,6 +13,7 @@ ERROR_WHILE_AUGMENTING_COL = "An error occoured while augmenting column: %s"
 ERROR_COL_NOT_FOUND = "AugmentDatesPlugin - column '%s' was not found."
 
 
+@plugin
 class AugmentDatesPlugin(IDataframePlugin):
     """ A plugin that takes dates and turns them into .year, .month, .day, .dayofweek, .hour and .min columns. """
 

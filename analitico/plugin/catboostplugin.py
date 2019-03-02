@@ -27,6 +27,7 @@ from analitico.schema import generate_schema, ANALITICO_TYPE_CATEGORY, ANALITICO
 from .interfaces import (
     IAlgorithmPlugin,
     PluginError,
+    plugin,
     ALGORITHM_TYPE_REGRESSION,
     ALGORITHM_TYPE_BINARY_CLASSICATION,
     ALGORITHM_TYPE_MULTICLASS_CLASSIFICATION,
@@ -37,6 +38,7 @@ from .interfaces import (
 ##
 
 
+@plugin
 class CatBoostPlugin(IAlgorithmPlugin):
     """ Base class for CatBoost regressor and classifier plugins """
 
@@ -161,6 +163,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
         """ Scores the results of this training for the CatBoostClassifier model """
         # There are many metrics available:
         # https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics
+
         scores = results["scores"]
         train_classes = results["data"]["classes"]  # the classes (actual strings)
         train_classes_codes = list(range(0, len(train_classes)))  # the codes, eg: 0, 1, 2...
@@ -200,11 +203,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html#sklearn.metrics.classification_report
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html#sklearn.metrics.confusion_matrix
         scores["classification_report"] = classification_report(
-            test_true, test_preds, target_names=results["data"]["classes"], output_dict=True
+            test_true, test_preds, target_names=train_classes, output_dict=True
         )
-        report = classification_report(test_true, test_preds, target_names=results["data"]["classes"])
-        self.info(report)
-
         scores["confusion_matrix"] = confusion_matrix(test_true, test_preds).tolist()
 
     def train(self, train, test, results, *args, **kwargs):
@@ -336,7 +336,6 @@ class CatBoostPlugin(IAlgorithmPlugin):
             model.save_model(model_path)
             results["scores"]["model_size"] = os.path.getsize(model_path)
             self.info("saved: %s (%d bytes)", model_path, os.path.getsize(model_path))
-
             return results
 
         except Exception as exc:
@@ -394,6 +393,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
 ##
 
 
+@plugin
 class CatBoostRegressorPlugin(CatBoostPlugin):
     """ A tabular data regressor based on CatBoost library """
 
@@ -407,6 +407,7 @@ class CatBoostRegressorPlugin(CatBoostPlugin):
 ##
 
 
+@plugin
 class CatBoostClassifierPlugin(CatBoostPlugin):
     """ A tabular data classifier based on CatBoost """
 

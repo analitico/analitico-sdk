@@ -1,10 +1,5 @@
 # plugin base classes
-from .interfaces import IPlugin  # NOQA: F401
-from .interfaces import IDataframeSourcePlugin  # NOQA: F401
-from .interfaces import IDataframePlugin  # NOQA: F401
-from .interfaces import IAlgorithmPlugin  # NOQA: F401
-from .interfaces import IGroupPlugin  # NOQA: F401
-from .interfaces import PluginError  # NOQA: F401
+from .interfaces import *
 
 # plugins to generate dataframes from sources
 from .csvdataframesourceplugin import CsvDataframeSourcePlugin

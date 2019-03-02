@@ -321,3 +321,14 @@ class PluginError(Exception):
         if self.plugin:
             return self.plugin.Meta.name + ": " + self.message
         return self.message
+
+
+##
+## @plugin registration helper
+##
+
+
+def plugin(cls):
+    """ Use this @plugin decorator on IPlugin classes to register them automatically """
+    IFactory.register_plugin(cls)
+    return cls

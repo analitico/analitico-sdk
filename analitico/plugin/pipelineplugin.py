@@ -8,13 +8,14 @@ import pandas as pd
 from analitico.utilities import time_ms
 from analitico.schema import pandas_to_analitico_type
 
-from .interfaces import IGroupPlugin
+from .interfaces import IGroupPlugin, plugin
 
 ##
 ## PipelinePlugin
 ##
 
 
+@plugin
 class PipelinePlugin(IGroupPlugin):
     """ 
     A plugin that creates a linear workflow by chaining together other plugins.

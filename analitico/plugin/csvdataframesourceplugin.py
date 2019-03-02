@@ -5,13 +5,14 @@ Plugins that import dataframes from different sources
 import pandas
 from analitico.utilities import get_dict_dot
 from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
-from .interfaces import IDataframeSourcePlugin, PluginError
+from .interfaces import IDataframeSourcePlugin, PluginError, plugin
 
 ##
 ## CsvDataframeSourcePlugin
 ##
 
 
+@plugin
 class CsvDataframeSourcePlugin(IDataframeSourcePlugin):
     """ A plugin that returns a pandas dataframe from a csv file """
 
