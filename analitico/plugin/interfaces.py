@@ -1,5 +1,5 @@
 import collections
-import pandas
+import pandas as pd
 import os.path
 import multiprocessing
 import os
@@ -56,6 +56,53 @@ class IPlugin(ABC, AttributeMixin):
     def __str__(self):
         return self.name
 
+    # Utility methods
+
+    def drop_selected_rows(self, df, df_dropped, message=None):
+        """ Drops df_dropped rows from dp in place, logs action """
+        started_on = time_ms()
+        rows_before = len(df.index)
+        if rows_before < 1:
+            self.warning("Can't drop rows where '%s' because dataframe is empty", message)
+            return df
+        df.drop(df_dropped.index, inplace=True)
+        if message:
+            rows_after = len(df.index)
+            rows_dropped = rows_before - rows_after
+            msg = "Dropped rows where '%s', rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
+            self.info(
+                msg,
+                message,
+                rows_before,
+                rows_after,
+                rows_dropped,
+                (100.0 * rows_dropped) / rows_before,
+                time_ms(started_on),
+            )
+        return df
+
+    def drop_na_rows(self, df, column):
+        """ Drops rows with null values in given column, logs action """
+        started_on = time_ms()
+        rows_before = len(df.index)
+        if rows_before < 1:
+            self.warning("Can't drop null '%s' rows because dataframe is empty", column)
+            return df
+        df.dropna(subset=[column], inplace=True)
+        rows_after = len(df.index)
+        rows_dropped = rows_before - rows_after
+        msg = "Dropped rows where '%s' is null, rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
+        self.info(
+            msg,
+            column,
+            rows_before,
+            rows_after,
+            rows_dropped,
+            (100.0 * rows_dropped) / rows_before,
+            time_ms(started_on),
+        )
+        return df
+
     # Logging
 
     @property
@@ -109,53 +156,8 @@ class IDataframePlugin(IPlugin):
         inputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
         outputs = [{"name": "dataframe", "type": "pandas.DataFrame"}]
 
-    def drop_selected_rows(self, df, df_dropped, message=None):
-        """ Drops df_dropped rows from dp in place, logs action """
-        started_on = time_ms()
-        rows_before = len(df.index)
-        if rows_before < 1:
-            self.warning("Can't drop rows where '%s' because dataframe is empty", message)
-            return df
-        df.drop(df_dropped.index, inplace=True)
-        if message:
-            rows_after = len(df.index)
-            rows_dropped = rows_before - rows_after
-            msg = "Dropped rows where '%s', rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
-            self.info(
-                msg,
-                message,
-                rows_before,
-                rows_after,
-                rows_dropped,
-                (100.0 * rows_dropped) / rows_before,
-                time_ms(started_on),
-            )
-        return df
-
-    def drop_na_rows(self, df, column):
-        """ Drops rows with null values in given column, logs action """
-        started_on = time_ms()
-        rows_before = len(df.index)
-        if rows_before < 1:
-            self.warning("Can't drop null '%s' rows because dataframe is empty", column)
-            return df
-        df.dropna(subset=[column], inplace=True)
-        rows_after = len(df.index)
-        rows_dropped = rows_before - rows_after
-        msg = "Dropped rows where '%s' is null, rows before: %d, after: %d, dropped: %d (%.2f%%) in %d ms"
-        self.info(
-            msg,
-            column,
-            rows_before,
-            rows_after,
-            rows_dropped,
-            (100.0 * rows_dropped) / rows_before,
-            time_ms(started_on),
-        )
-        return df
-
-    def run(self, *args, action=None, **kwargs) -> pandas.DataFrame:
-        assert isinstance(args[0], pandas.DataFrame)
+    def run(self, *args, action=None, **kwargs) -> pd.DataFrame:
+        assert isinstance(args[0], pd.DataFrame)
         return args[0]
 
 
@@ -183,7 +185,7 @@ class IAlgorithmPlugin(IPlugin):
         it may optionally have a dataframe of validation data and will return a dictionary
         with information on the trained model plus a number of artifacts.
         """
-        assert isinstance(args[0], pandas.DataFrame)
+        assert isinstance(args[0], pd.DataFrame)
         started_on = time_ms()
         results = collections.OrderedDict(
             {
@@ -217,7 +219,7 @@ class IAlgorithmPlugin(IPlugin):
         it may optionally have a dataframe of validation data and will return a dictionary
         with information on the trained model plus a number of artifacts.
         """
-        assert isinstance(args[0], pandas.DataFrame)
+        # assert isinstance(args[0], pandas.DataFrame) # custom models may take json as input
         data = args[0]
 
         artifacts_path = self.factory.get_artifacts_directory()
@@ -240,8 +242,9 @@ class IAlgorithmPlugin(IPlugin):
         )
 
         # force schema like in training data
-        schema = training["data"]["schema"]
-        data = apply_schema(data, schema)
+        if isinstance(data, pd.DataFrame):
+            schema = training["data"]["schema"]
+            data = apply_schema(data, schema)
 
         # load model, calculate predictions
         results = self.predict(data, training, results, *args, **kwargs)
