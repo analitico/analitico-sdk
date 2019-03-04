@@ -49,11 +49,19 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
             df = analitico.pandas.pd_read_csv(csv_stream, schema)
             self.info("%d rows in %d ms", len(df), time_ms(reading_on))
 
+            # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sample.html
+            sample = self.get_attribute("sample", 0)
+            if sample > 0:
+                rows_before = len(df)
+                df = df.sample(n=sample) if sample > 1.0 else df.sample(frac=sample)
+                self.info("sample: %f, rows before: %d, rows after: %d", sample, rows_before, len(df))
+
             tail = self.get_attribute("tail", 0)
             if tail > 0:
                 rows_before = len(df)
                 df = df.tail(tail)
                 self.info("tail: %d, rows before: %d, rows after: %d", tail, rows_before, len(df))
+
             return df
 
         except Exception as exc:
