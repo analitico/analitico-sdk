@@ -144,12 +144,12 @@ class CatBoostPlugin(IAlgorithmPlugin):
         # after moving label to the end for easier reading
         test_predictions = model.predict(test_pool)
         label = test_labels.name
-        test_df = test_df.copy().tail(100)  # just sampling
         test_df[label] = test_labels
         cols = list(test_df.columns.values)
         cols.pop(cols.index(label))
         test_df = test_df[cols + [label]]
-        test_df["prediction"] = test_predictions[-100:]  # match sample above
+        test_df["prediction"] = test_predictions
+        test_df = test_df.sample(n=200)  # just sampling
         artifacts_path = self.factory.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
 
