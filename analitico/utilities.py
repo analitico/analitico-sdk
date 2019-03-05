@@ -134,7 +134,8 @@ def get_runtime():
         # production servers have an environment variable indicating git commit
         runtime["github"] = {}
         try:
-            runtime["github"]["version"] = str(subprocess.check_output(["git", "describe"]).strip())
+            v = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
+            runtime["github"]["version"] = v
         except:
             pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
