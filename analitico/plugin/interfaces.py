@@ -110,17 +110,17 @@ class IPlugin(ABC, AttributeMixin):
         """ Logger that can be used by the plugin to communicate errors, etc with host """
         return self.factory.logger
 
-    def info(self, msg, *args):
-        self.factory.info(msg, *args)
+    def info(self, msg, *args, **kwargs):
+        self.factory.info(msg, *args, **kwargs)
 
-    def warning(self, msg, *args):
-        self.factory.warning(msg, *args)
+    def warning(self, msg, *args, **kwargs):
+        self.factory.warning(msg, *args, **kwargs)
 
-    def error(self, msg, *args, exception=None):
-        self.factory.error(msg, *args, plugin=self, exception=exception)
+    def error(self, msg, *args, exception=None, **kwargs):
+        self.factory.error(msg, *args, plugin=self, exception=exception, **kwargs)
 
-    def exception(self, msg, *args, exception=None):
-        self.factory.exception(msg, *args, plugin=self, exception=exception)
+    def exception(self, msg, *args, exception=None, **kwargs):
+        self.factory.exception(msg, *args, plugin=self, exception=exception, **kwargs)
 
 
 ##
