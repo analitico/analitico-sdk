@@ -143,6 +143,8 @@ class Factory(IFactory):
             return analitico.DATASET_TYPE
         if item_id.startswith(analitico.ENDPOINT_PREFIX):
             return analitico.ENDPOINT_TYPE
+        if item_id.startswith(analitico.LOG_PREFIX):
+            return analitico.LOG_TYPE
         if item_id.startswith(analitico.JOB_PREFIX):
             return analitico.JOB_TYPE
         if item_id.startswith(analitico.MODEL_PREFIX):
