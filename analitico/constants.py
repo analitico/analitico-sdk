@@ -21,6 +21,7 @@ RECIPE_TYPE = "recipe"
 TOKEN_TYPE = "token"
 USER_TYPE = "user"
 WORKSPACE_TYPE = "workspace"
+LOG_TYPE = "log"
 
 # IDs
 DATASET_PREFIX = "ds_"  # dataset source, filters, etc
@@ -31,3 +32,4 @@ RECIPE_PREFIX = "rx_"  # machine learning recipe (an experiment with modules, co
 TOKEN_PREFIX = "tok_"  # authorization token
 USER_PREFIX = "id_"  # an identity profile
 WORKSPACE_PREFIX = "ws_"  # workspace with rights and one or more projects and other resources
+LOG_PREFIX = "lg_"  # log record
