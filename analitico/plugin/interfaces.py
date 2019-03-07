@@ -3,6 +3,8 @@ import pandas as pd
 import os.path
 import multiprocessing
 import os
+import string
+import random
 
 from abc import ABC, abstractmethod
 
@@ -13,6 +15,7 @@ from analitico.mixin import AttributeMixin
 from analitico.interfaces import IFactory
 from analitico.utilities import time_ms, save_json, read_json
 from analitico.schema import apply_schema
+from analitico.constants import PLUGIN_PREFIX
 
 ##
 ## IPlugin - base class for all plugins
@@ -335,3 +338,20 @@ def plugin(cls):
     """ Use this @plugin decorator on IPlugin classes to register them automatically """
     IFactory.register_plugin(cls)
     return cls
+
+def generate_plugin_id():
+    """ Generates a random id that is suitable for a plugin instance """
+    return PLUGIN_PREFIX + "".join(random.choice(string.hexdigits) for i in range(8))
+
+def apply_plugin_id(plugin_conf: dict):
+    """ Checks if the plugin configuration has IDs and if not generates them for this plugin and its children. True if applied, False unchanged. """
+    applied = False
+    if plugin_conf:
+        if "id" not in plugin_conf:
+            plugin_conf["id"] = generate_plugin_id()
+            applied = True
+        if "plugins" in plugin_conf:
+            for child_conf in plugin_conf["plugins"]:
+                if apply_plugin_id(child_conf):
+                    applied = True
+    return applied
