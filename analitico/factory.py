@@ -5,6 +5,7 @@ import requests
 import json
 import re
 import hashlib
+import logging
 
 from urllib.parse import urlparse
 from io import BytesIO, StringIO
@@ -26,20 +27,14 @@ import analitico.plugin
 class Factory(IFactory):
     """ A factory for analitico objects implemented via API endpoint calls """
 
-    # Authorization token to be used when calling analitico APIs
-    token = None
-
-    # APIs endpoint, eg: https://analitico.ai/api/
-    endpoint = None
-
     def __init__(self, token=None, endpoint=None, **kwargs):
         super().__init__(**kwargs)
         if token:
             assert token.startswith("tok_")
-            self.token = token
+            self.set_attribute("token", token)
         if endpoint:
             assert endpoint.startswith("http")
-            self.endpoint = endpoint
+            self.set_attribute("endpoint", endpoint)
 
     ##
     ## Temp and cache directories
@@ -177,17 +172,6 @@ class Factory(IFactory):
         # can be run in Jupyter with all its plugins, etc.
         plugin = self.get_plugin(**plugin_settings)
         return Dataset(self, plugin=plugin)
-
-    ##
-    ## Logging
-    ##
-
-    @property
-    def logger(self):
-        """ A logger that should be used for tracing """
-        return analitico.utilities.logger
-
-    # remaning info, warning, error and exception methods are defined in IFactory...
 
     ##
     ## with Factory as: lifecycle methods

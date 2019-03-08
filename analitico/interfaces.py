@@ -2,9 +2,12 @@ import os
 import os.path
 import hashlib
 import inspect
+import logging
 
 from abc import abstractmethod
 from .mixin import AttributeMixin
+from .exceptions import AnaliticoException
+from .status import STATUS_ALL, STATUS_FAILED
 
 
 class IFactory(AttributeMixin):
@@ -12,6 +15,15 @@ class IFactory(AttributeMixin):
 
     # dictionary of registered plugins name:class
     __plugins = {}
+
+    ##
+    ## Factory context
+    ##
+
+    @property
+    def workspace(self):
+        """ Workspace context in which this factory runs (optional) """
+        return self.get_attribute("workspace")
 
     @property
     def token(self):
@@ -27,6 +39,11 @@ class IFactory(AttributeMixin):
     def request(self):
         """ Request used as context when running on the server or running async jobs (optional) """
         return self.get_attribute("request")
+
+    @property
+    def job(self):
+        """ Job running on the server (optional) """
+        return self.get_attribute("job")
 
     ##
     ## Temp and cache directories
@@ -130,30 +147,70 @@ class IFactory(AttributeMixin):
     ## Logging
     ##
 
+    def _prepare_log(self, msg, *args, **kwargs):
+        """ Moves any kwargs other than 'exc_info' and 'extra' to 'extra' dictionary. """
+        if "extra" not in kwargs:
+            kwargs["extra"] = {}
+
+        extra = kwargs["extra"]
+        for key, value in kwargs.copy().items():
+            if key not in ("exc_info", "extra"):
+                extra[key] = kwargs.pop(key)
+
+        if "workspace" not in extra and self.workspace:
+            extra["workspace"] = self.workspace
+        if "token" not in extra and self.token:
+            extra["token"] = self.token
+        if "endpoint" not in extra and self.endpoint:
+            extra["endpoint"] = self.endpoint
+        if "request" not in extra and self.request:
+            extra["request"] = self.request
+        if "job" not in extra and self.job:
+            extra["job"] = self.job
+
+        return msg, args, kwargs
+
     @property
     @abstractmethod
     def logger(self):
-        """ A logger that should be used for tracing """
-        pass
+        """ A logger that should be used for tracing errors within jobs, plugins, etc... """
+        return logging.getLogger("analitico")
 
-    def info(self, msg, *args, plugin=None, **kwargs):
-        if self.logger:
-            self.logger.info(msg, *args, **kwargs)
+    def debug(self, msg, *args, **kwargs):
+        """ Log a debug record. As a convenience, any named parameter will end up in extra """
+        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
+        self.logger.debug(msg, *args, **kwargs)
 
-    def warning(self, msg, *args, plugin=None, **kwargs):
-        if self.logger:
-            self.logger.warning(msg, *args, **kwargs)
+    def info(self, msg, *args, **kwargs):
+        """ Log an info record. As a convenience, any named parameter will end up in extra """
+        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
+        self.logger.info(msg, *args, **kwargs)
 
-    def error(self, msg, *args, plugin=None, exception=None):
-        if self.logger:
-            self.logger.error(msg, *args, exc_info=exception)
+    def status(self, item, status, **kwargs):
+        """ Updates on the status of an item. Status is one of: created, running, canceled, completed or failed. """
+        if status != STATUS_FAILED:
+            self.info("%s/%s", item, status, item=item, status=status, **kwargs)
+        else:
+            self.error("%s/%s", item, status, item=item, status=status, **kwargs)
 
-    def exception(self, msg, *args, plugin=None, exception=None):
-        msg = msg % (args)
-        self.error(msg)
-        from analitico.plugin import PluginError
+    def warning(self, msg, *args, **kwargs):
+        """ Log a warning record. As a convenience, any named parameter will end up in extra """
+        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
+        self.logger.warning(msg, *args, **kwargs)
 
-        raise PluginError(msg, plugin=plugin, exception=exception)
+    def error(self, msg, *args, **kwargs):
+        """ Log an error record. As a convenience, any named parameter will end up in extra """
+        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
+        self.logger.error(msg, *args, **kwargs)
+
+    def exception(self, msg, *args, **kwargs):
+        message = msg % (args)
+        self.error(msg, *args, **kwargs)
+        if "exc_info" in kwargs and isinstance(kwargs["exc_info"], Exception):
+            raise AnaliticoException(message) from kwargs["exc_info"]
+        if "exception" in kwargs and isinstance(kwargs["exception"], Exception):
+            raise AnaliticoException(message) from kwargs["exception"]
+        raise AnaliticoException(message)
 
     ##
     ## with xxx as: lifecycle methods
