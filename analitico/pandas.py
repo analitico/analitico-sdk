@@ -109,6 +109,7 @@ def pd_drop_column(df, column, inplace=False):
     except:
         pass
 
+
 def pd_to_dict(df):
     """ Convert a dataframe to json, encodes all dates and timestamps to ISO8601 """
     assert isinstance(df, pd.DataFrame), "pd_to_dict - requires a pd.DataFrame"
@@ -117,6 +118,7 @@ def pd_to_dict(df):
         io.seek(0)
         return json.load(io)
 
+
 def pd_sample(df, n=20):
     """ Returns a sample from the given DataFrame, either number of rows or percentage. """
     if n < 1:
@@ -124,4 +126,3 @@ def pd_sample(df, n=20):
     if n < len(df.index):
         return df.sample(n=n)
     return df
-

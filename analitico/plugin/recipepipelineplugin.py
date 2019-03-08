@@ -7,6 +7,8 @@ from .pipelineplugin import PipelinePlugin, plugin
 
 import analitico.constants
 import analitico.pandas
+
+from analitico import status, AnaliticoException
 from analitico.utilities import read_json
 
 ##
@@ -31,46 +33,47 @@ class RecipePipelinePlugin(PipelinePlugin):
 
     def run(self, *args, action=None, **kwargs):
         """ Process the plugins in sequence to create trained model artifacts """
-        try:
+        artifacts_path = self.factory.get_artifacts_directory()
+        training_path = os.path.join(artifacts_path, "training.json")
 
-            # when training run the recipe which will produce the training artifacts
-            if analitico.constants.ACTION_TRAIN in action:
-                results = super().run(*args, action=action, **kwargs)
-                if not isinstance(results, dict):
-                    msg = "Pipeline didn't produce a dictionary with training results"
-                    self.error(msg)
-                    raise PluginError(msg, self)
+        # when training run the recipe which will produce the training artifacts
+        if analitico.constants.ACTION_TRAIN in action:
+            results = super().run(*args, action=action, **kwargs)
+            # training.json, trained models and other artifacts should
+            # now be in the artifacts directory. depending on the environment
+            # these may be left on disk (SDK) or stored in cloud (APIs)
+            if not isinstance(results, dict):
+                self.factory.exception(
+                    "Pipeline didn't return a dictionary with training results",
+                    item=self,
+                    artifacts_path=artifacts_path,
+                )
+            if not os.path.isfile(training_path):
+                self.factory.exception(
+                    "Pipeline didn't produce training.json", item=self, artifacts_path=artifacts_path
+                )
+            return results
 
-                # training.json, trained models and other artifacts should
-                # now be in the artifacts directory. depending on the environment
-                # these may be left on disk (SDK) or stored in cloud (APIs)
-                artifacts_path = self.factory.get_artifacts_directory()
-                assert (
-                    len(os.listdir(artifacts_path)) >= 1
-                ), "RecipePipelinePlugin - should produce at least one file artifact when training"
-                return results
+        # when predicting pass the data to the recipe for prediction
+        if analitico.constants.ACTION_PREDICT in action:
+            # check for training information on disk
+            if not os.path.isfile(training_path):
+                self.factory.exception(
+                    "Pipeline can't fine file training.json", item=self, artifacts_path=artifacts_path
+                )
 
-            # when predicting pass the data to the recipe for prediction
-            if analitico.constants.ACTION_PREDICT in action:
+            # normally prediction input is a pd.DataFrame
+            if isinstance(args[0], pd.DataFrame):
+                df_original = args[0]  # original data
+                df = df_original.copy()  # df processed inplace
 
-                # read training information from disk
-                artifacts_path = self.factory.get_artifacts_directory()
-                training_path = os.path.join(artifacts_path, "training.json")
-                assert os.path.isfile(training_path)
+                predictions = super().run(df, action=action, **kwargs)
+                predictions["records"] = analitico.pandas.pd_to_dict(df_original)
+                predictions["processed"] = analitico.pandas.pd_to_dict(df)
+            else:
+                # run the pipeline with generic input return predictions
+                predictions = super().run(*args, action=action, **kwargs)
+            return predictions
 
-                # normally prediction input is a pd.DataFrame
-                if isinstance(args[0], pd.DataFrame):
-                    df_original = args[0]  # original data
-                    df = df_original.copy()  # df processed inplace
-
-                    predictions = super().run(df, action=action, **kwargs)
-                    predictions["records"] = analitico.pandas.pd_to_dict(df_original)
-                    predictions["processed"] = analitico.pandas.pd_to_dict(df)
-                else:
-                    # run the pipeline with generic input return predictions
-                    predictions = super().run(*args, action=action, **kwargs)
-
-                return predictions
-
-        except Exception as exc:
-            self.exception("RecipePipelinePlugin - error during %s", action, exception=exc)
+        # let the factory raise the exception so it can fill it with context
+        self.factory.exception("RecipePipelinePlugin doesn't implement action: %s", action, plugin=self)
