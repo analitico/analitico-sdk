@@ -32,6 +32,6 @@ LOG_PREFIX = "lg_"  # log record
 MODEL_PREFIX = "ml_"  # trained machine learning model (not a django model)
 RECIPE_PREFIX = "rx_"  # machine learning recipe (an experiment with modules, code, etc)
 TOKEN_PREFIX = "tok_"  # authorization token
-PLUGIN_PREFIX = "pl_" # plugin instance (not plugin description or metadata)
+PLUGIN_PREFIX = "pl_"  # plugin instance (not plugin description or metadata)
 USER_PREFIX = "id_"  # an identity profile
 WORKSPACE_PREFIX = "ws_"  # workspace with rights and one or more projects and other resources
