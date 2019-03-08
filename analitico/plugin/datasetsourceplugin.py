@@ -53,7 +53,7 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
             sample = self.get_attribute("sample", 0)
             if sample > 0:
                 rows_before = len(df)
-                df = df.sample(n=sample) if sample > 1.0 else df.sample(frac=sample)
+                df = analitico.pandas.pd_sample(df, sample)
                 self.info("sample: %f, rows before: %d, rows after: %d", sample, rows_before, len(df))
 
             tail = self.get_attribute("tail", 0)

@@ -22,6 +22,7 @@ from catboost import CatBoostClassifier, CatBoostRegressor
 
 from analitico.utilities import time_ms
 
+import analitico.pandas
 import analitico.schema
 from analitico.schema import generate_schema, ANALITICO_TYPE_CATEGORY, ANALITICO_TYPE_INTEGER, ANALITICO_TYPE_FLOAT
 from .interfaces import (
@@ -87,9 +88,9 @@ class CatBoostPlugin(IAlgorithmPlugin):
             if analitico.schema.get_column_type(df, column) is analitico.schema.ANALITICO_TYPE_CATEGORY:
                 categorical_idx.append(i)
                 df[column].replace(np.nan, "", regex=True, inplace=True)
-                self.info("%3d %s (%s/categorical)", i, column, df[column].dtype.name)
+                self.factory.debug("%3d %s (%s/categorical)", i, column, df[column].dtype.name)
             else:
-                self.info("%3d %s (%s)", i, column, df[column].dtype.name)
+                self.factory.debug("%3d %s (%s)", i, column, df[column].dtype.name)
         return categorical_idx
 
     def validate_schema(self, train_df, test_df):
@@ -149,7 +150,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
         cols.pop(cols.index(label))
         test_df = test_df[cols + [label]]
         test_df["prediction"] = test_predictions
-        test_df = test_df.sample(n=200)  # just sampling
+        test_df = analitico.pandas.pd_sample(test_df, 200)  # just sampling
         artifacts_path = self.factory.get_artifacts_directory()
         test_df.to_csv(os.path.join(artifacts_path, "test.csv"))
 
@@ -298,8 +299,7 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # save some training data for debugging
             artifacts_path = self.factory.get_artifacts_directory()
-            num_samples = min(200, len(train_df))
-            samples_df = train_df.sample(n=num_samples)
+            samples_df = analitico.pandas.pd_sample(train_df, 200)
             samples_path = os.path.join(artifacts_path, "training-samples.json")
             samples_df.to_json(samples_path, orient="records")
             self.info("saved: %s (%d bytes)", samples_path, os.path.getsize(samples_path))
