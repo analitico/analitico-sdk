@@ -104,9 +104,10 @@ def pd_read_csv(filepath_or_buffer, schema=None):
 
 def pd_drop_column(df, column, inplace=False):
     """ Drops a column, no exceptions if it's not there """
-    if df and column in df:
+    try:
         df.drop([column], axis=1, inplace=inplace)
-
+    except:
+        pass
 
 def pd_to_dict(df):
     """ Convert a dataframe to json, encodes all dates and timestamps to ISO8601 """
@@ -115,3 +116,12 @@ def pd_to_dict(df):
         df.to_json(io, orient="records", date_format="iso", date_unit="s", double_precision=6)
         io.seek(0)
         return json.load(io)
+
+def pd_sample(df, n=20):
+    """ Returns a sample from the given DataFrame, either number of rows or percentage. """
+    if n < 1:
+        return df.sample(frac=n)
+    if n < len(df.index):
+        return df.sample(n=n)
+    return df
+
