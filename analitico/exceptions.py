@@ -10,7 +10,7 @@ class AnaliticoException(Exception):
 
     code = None
 
-    extra = {}
+    extra = None
 
     def __init__(self, msg, *args, code=None, exception=None, extra=None, **kwargs):
         self.message = msg % (args)
@@ -18,8 +18,7 @@ class AnaliticoException(Exception):
         # retain exception chain
         self.exception = exception if exception else sys.exc_info()[1]
 
-        if "extra" in kwargs:
-            self.extra = kwargs.pop("extra")
+        self.extra = extra if extra else {}
         for key, value in kwargs.items():
             self.extra[key] = value
 

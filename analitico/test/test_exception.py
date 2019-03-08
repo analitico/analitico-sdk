@@ -16,13 +16,27 @@ from .test_mixin import TestMixin
 class ExceptionTests(unittest.TestCase, TestMixin):
     """ Unit testing of AnaliticoException """
 
-    def test_exception(self):
+    def test_exception_basics(self):
+        try:
+            raise AnaliticoException("A problem", item_id="it_001", extra={"recipe_id": "rx_002"})
+        except AnaliticoException as e:
+            self.assertEqual(e.message, "A problem")
+            self.assertEqual(e.extra["item_id"], "it_001")
+            self.assertEqual(e.extra["recipe_id"], "rx_002")
+
+    def test_exception_formatting(self):
         try:
             raise AnaliticoException("A problem %d", 1, item_id="it_001", extra={"recipe_id": "rx_002"})
         except AnaliticoException as e:
             self.assertEqual(e.message, "A problem 1")
             self.assertEqual(e.extra["item_id"], "it_001")
             self.assertEqual(e.extra["recipe_id"], "rx_002")
+
+    def test_exception_formatting_multiple(self):
+        try:
+            raise AnaliticoException("A problem %d with %s", 1, "this", item_id="it_001", extra={"recipe_id": "rx_002"})
+        except AnaliticoException as e:
+            self.assertEqual(e.message, "A problem 1 with this")
 
     def test_exception_with_inner(self):
         try:
