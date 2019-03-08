@@ -34,6 +34,10 @@ class IPlugin(ABC, AttributeMixin):
     factory: IFactory = None
 
     @property
+    def id(self):
+        return self.get_attribute("id")
+
+    @property
     def name(self):
         assert self.Meta.name
         return self.Meta.name
@@ -124,6 +128,10 @@ class IPlugin(ABC, AttributeMixin):
 
     def exception(self, msg, *args, exception=None, **kwargs):
         self.factory.exception(msg, *args, plugin=self, exception=exception, **kwargs)
+
+    def __str__(self):
+        id = self.get_attribute("id")
+        return self.Meta.name + ":" + id if id else self.Meta.name
 
 
 ##
@@ -339,9 +347,11 @@ def plugin(cls):
     IFactory.register_plugin(cls)
     return cls
 
+
 def generate_plugin_id():
     """ Generates a random id that is suitable for a plugin instance """
     return PLUGIN_PREFIX + "".join(random.choice(string.hexdigits) for i in range(8))
+
 
 def apply_plugin_id(plugin_conf: dict):
     """ Checks if the plugin configuration has IDs and if not generates them for this plugin and its children. True if applied, False unchanged. """
