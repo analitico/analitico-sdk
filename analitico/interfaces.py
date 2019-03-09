@@ -211,11 +211,10 @@ class IFactory(AttributeMixin):
     def exception(self, msg, *args, **kwargs):
         message = msg % (args)
         self.error(msg, *args, **kwargs)
-        if "exc_info" in kwargs and isinstance(kwargs["exc_info"], Exception):
-            raise AnaliticoException(message) from kwargs["exc_info"]
-        if "exception" in kwargs and isinstance(kwargs["exception"], Exception):
-            raise AnaliticoException(message) from kwargs["exception"]
-        raise AnaliticoException(message)
+        exception = kwargs.get("exception", None)
+        if exception:
+            raise AnaliticoException(message, **kwargs) from exception
+        raise AnaliticoException(message, **kwargs)
 
     ##
     ## with xxx as: lifecycle methods
