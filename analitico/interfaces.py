@@ -175,9 +175,16 @@ class IFactory(AttributeMixin):
                 extra[attr_name] = attr
         return msg, kwargs
 
+    def set_logger_level(self, level):
+        """ Sets logger level to given level for all future log calls make through the factory logger """
+        self.set_attribute("logger_level", level)
+
     def get_logger(self, name="analitico"):
         """ Returns logger wrapped into an adapter that adds contextual information from the IFactory """
-        return IFactory.LogAdapter(logging.getLogger("analitico"), self)
+        logger_level = self.get_attribute("logger_level", logging.INFO)
+        logger = IFactory.LogAdapter(logging.getLogger("analitico"), self)
+        logger.setLevel(logger_level)
+        return logger
 
     @property
     def logger(self):
@@ -185,28 +192,21 @@ class IFactory(AttributeMixin):
         return self.get_logger()
 
     def debug(self, msg, *args, **kwargs):
-        """ Log a debug record. As a convenience, any named parameter will end up in extra """
-        self.logger.debug(msg, *args, **kwargs)
+        self.logger.log(logging.DEBUG, msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
-        """ Log an info record. As a convenience, any named parameter will end up in extra """
-        self.logger.info(msg, *args, **kwargs)
+        self.logger.log(logging.INFO, msg, *args, **kwargs)
+
+    def warning(self, msg, *args, **kwargs):
+        self.logger.log(logging.WARNING, msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        self.logger.log(logging.ERROR, msg, *args, **kwargs)
 
     def status(self, item, status, **kwargs):
         """ Updates on the status of an item. Status is one of: created, running, canceled, completed or failed. """
-        name = type(item).__name__
-        if status != STATUS_FAILED:
-            self.info("status: %s, name: %s", status, name, item=item, status=status, **kwargs)
-        else:
-            self.error("status: %s, name: %s", status, name, item=item, status=status, **kwargs)
-
-    def warning(self, msg, *args, **kwargs):
-        """ Log a warning record. As a convenience, any named parameter will end up in extra """
-        self.logger.warning(msg, *args, **kwargs)
-
-    def error(self, msg, *args, **kwargs):
-        """ Log an error record. As a convenience, any named parameter will end up in extra """
-        self.logger.error(msg, *args, **kwargs)
+        level = logging.ERROR if status == STATUS_FAILED else logging.INFO
+        self.logger.log(level, "status: %s, name: %s", status, type(item).__name__, item=item, status=status, **kwargs)
 
     def exception(self, msg, *args, **kwargs):
         message = msg % (args)
