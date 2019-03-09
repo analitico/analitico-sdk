@@ -4,19 +4,16 @@ import sys
 class AnaliticoException(Exception):
     """ Base exception used in the project that can carry extra information with it in the form of a dictionary """
 
-    exception = None
+    default_message = "An error occurred."
+    default_code = "error"
 
     message = None
-
     code = None
-
     extra = None
 
-    def __init__(self, msg, *args, code=None, exception=None, extra=None, **kwargs):
-        self.message = msg % (args)
-
-        # retain exception chain
-        self.exception = exception if exception else sys.exc_info()[1]
+    def __init__(self, message, *args, code=None, extra=None, **kwargs):
+        self.message = message % (args) if message else self.default_message
+        self.code = code if code else self.default_code
 
         self.extra = extra if extra else {}
         for key, value in kwargs.items():
