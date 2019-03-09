@@ -147,7 +147,19 @@ class IFactory(AttributeMixin):
     ## Logging
     ##
 
-    def _prepare_log(self, msg, *args, **kwargs):
+    class LogAdapter(logging.LoggerAdapter):
+        """ A simple adapter which will call "process" on every log record to enrich it with contextual information from the IFactory. """
+
+        factory = None
+
+        def __init__(self, logger, factory):
+            super().__init__(logger, {})
+            self.factory = factory
+
+        def process(self, msg, kwargs):
+            return self.factory.process_log(msg, kwargs)
+
+    def process_log(self, msg, kwargs):
         """ Moves any kwargs other than 'exc_info' and 'extra' to 'extra' dictionary. """
         if "extra" not in kwargs:
             kwargs["extra"] = {}
@@ -157,50 +169,43 @@ class IFactory(AttributeMixin):
             if key not in ("exc_info", "extra"):
                 extra[key] = kwargs.pop(key)
 
-        if "workspace" not in extra and self.workspace:
-            extra["workspace"] = self.workspace
-        if "token" not in extra and self.token:
-            extra["token"] = self.token
-        if "endpoint" not in extra and self.endpoint:
-            extra["endpoint"] = self.endpoint
-        if "request" not in extra and self.request:
-            extra["request"] = self.request
-        if "job" not in extra and self.job:
-            extra["job"] = self.job
+        for attr_name in ("workspace", "token", "endpoint", "request", "job"):
+            attr = self.get_attribute(attr_name, None)
+            if attr:
+                extra[attr_name] = attr
+        return msg, kwargs
 
-        return msg, args, kwargs
+    def get_logger(self, name="analitico"):
+        """ Returns logger wrapped into an adapter that adds contextual information from the IFactory """
+        return IFactory.LogAdapter(logging.getLogger("analitico"), self)
 
     @property
-    @abstractmethod
     def logger(self):
-        """ A logger that should be used for tracing errors within jobs, plugins, etc... """
-        return logging.getLogger("analitico")
+        """ Returns logger wrapped into an adapter that adds contextual information from the IFactory """
+        return self.get_logger()
 
     def debug(self, msg, *args, **kwargs):
         """ Log a debug record. As a convenience, any named parameter will end up in extra """
-        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
         self.logger.debug(msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
         """ Log an info record. As a convenience, any named parameter will end up in extra """
-        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
         self.logger.info(msg, *args, **kwargs)
 
     def status(self, item, status, **kwargs):
         """ Updates on the status of an item. Status is one of: created, running, canceled, completed or failed. """
+        name = type(item).__name__
         if status != STATUS_FAILED:
-            self.info("%s/%s", item, status, item=item, status=status, **kwargs)
+            self.info("status: %s, name: %s", status, name, item=item, status=status, **kwargs)
         else:
-            self.error("%s/%s", item, status, item=item, status=status, **kwargs)
+            self.error("status: %s, name: %s", status, name, item=item, status=status, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
         """ Log a warning record. As a convenience, any named parameter will end up in extra """
-        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
         self.logger.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
         """ Log an error record. As a convenience, any named parameter will end up in extra """
-        msg, args, kwargs = self._prepare_log(msg, *args, **kwargs)
         self.logger.error(msg, *args, **kwargs)
 
     def exception(self, msg, *args, **kwargs):
