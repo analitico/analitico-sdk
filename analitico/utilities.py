@@ -26,6 +26,7 @@ try:
 except Exception:
     pass
 
+from analitico.exceptions import AnaliticoException
 from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
 
 # default logger for analitico's libraries
@@ -152,6 +153,25 @@ def get_runtime():
 ##
 ## Json utilities
 ##
+
+JSON_NOT_SERIALIZABLE = "NOT_SERIALIZABLE"
+
+
+def json_sanitize_dict(dict):
+    """ Remove from dictionary all items which cannot be easily serialized to json, replace with item_id where possible. """
+    sanitized = json.loads(json.dumps(dict, skipkeys=True, default=lambda o: JSON_NOT_SERIALIZABLE))
+    for key in dict:
+        if sanitized[key] == JSON_NOT_SERIALIZABLE:
+            try:
+                # if an item could note be serialized, let's see if we can replace it with its id
+                key_id = key + "_id"
+                if key_id not in sanitized:
+                    sanitized[key_id] = dict[key].id
+                    sanitized.pop(key)
+            except:
+                # item doesn't have an .id
+                pass
+    return sanitized
 
 
 def save_json(data, filename, indent=4):
