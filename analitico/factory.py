@@ -144,8 +144,12 @@ class Factory(IFactory):
             return analitico.JOB_TYPE
         if item_id.startswith(analitico.MODEL_PREFIX):
             return analitico.MODEL_TYPE
+        if item_id.startswith(analitico.PLUGIN_PREFIX):
+            return analitico.PLUGIN_TYPE
         if item_id.startswith(analitico.RECIPE_PREFIX):
             return analitico.RECIPE_TYPE
+        if item_id.startswith(analitico.WORKER_PREFIX):
+            return analitico.WORKER_TYPE
         if item_id.startswith(analitico.WORKSPACE_PREFIX):
             return analitico.WORKSPACE_TYPE
         if re.match(self.EMAIL_RE, item_id):
