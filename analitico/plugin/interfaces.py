@@ -264,9 +264,9 @@ class IAlgorithmPlugin(IPlugin):
 
     def run(self, *args, action=None, **kwargs):
         """ Algorithm can run to train a model or to predict from a trained model """
-        if action.endswith("/train"):
+        if action.endswith("train"):
             return self._run_train(*args, **kwargs)
-        if action.endswith("/predict"):
+        if action.endswith("predict"):
             return self._run_predict(*args, **kwargs)
         self.error("unknown action: %s", action)
         raise PluginError("IAlgorithmPlugin - action should be /train or /predict")
