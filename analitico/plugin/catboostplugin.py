@@ -131,7 +131,23 @@ class CatBoostPlugin(IAlgorithmPlugin):
             results["parameters"][key] = value
 
         results["scores"]["best_iteration"] = model.get_best_iteration()
-        results["scores"]["best_score"] = model.get_best_score()
+
+        best_score = model.get_best_score()
+        try:
+            best_score["training"] = best_score.pop("learn")
+            best_score["validation"] = best_score.pop("validation_0")
+        except KeyError:
+            pass
+        results["scores"]["best_score"] = best_score
+
+        # result for each evaluation epoch
+        evals_result = model.get_evals_result()
+        try:
+            evals_result["training"] = evals_result.pop("learn")
+            evals_result["validation"] = evals_result.pop("validation_0")
+        except KeyError:
+            pass
+        results["scores"]["iterations"] = evals_result
 
         # catboost can tell which features weigh more heavily on the predictions
         self.info("features importance:")

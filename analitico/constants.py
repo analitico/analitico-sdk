@@ -39,4 +39,4 @@ USER_PREFIX = "id_"  # an identity profile
 WORKSPACE_PREFIX = "ws_"  # workspace with rights and one or more projects and other resources
 
 PLUGIN_PREFIX = "pl_"  # plugin instance (not plugin description or metadata)
-WORKER_PREFIX = "wk_" # worker process
+WORKER_PREFIX = "wk_"  # worker process
