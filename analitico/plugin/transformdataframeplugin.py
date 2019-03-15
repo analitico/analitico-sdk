@@ -1,13 +1,13 @@
 import pandas as pd
 
 from analitico.schema import apply_schema
-from .interfaces import IDataframePlugin
+from .interfaces import IDataframePlugin, plugin
 
 ##
 ## TransformDataframePlugin
 ##
 
-
+@plugin
 class TransformDataframePlugin(IDataframePlugin):
     """
     TransformDataframePlugin can apply a schema to a dataframe and can be used to:
