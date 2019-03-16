@@ -114,9 +114,10 @@ class Factory(IFactory):
                 headers = {"Authorization": "Bearer " + self.token}
             response = requests.get(url, stream=True, headers=headers)
 
-            etag = response.headers["etag"]
-            if etag:
-                return self.get_cached_stream(response.raw, url + etag)[0]
+            if "etag" in response.headers:
+                etag = response.headers["etag"]
+                if etag:
+                    return self.get_cached_stream(response.raw, url + etag)[0]
             return response.raw
         return open(url, "rb")
 
@@ -144,6 +145,8 @@ class Factory(IFactory):
             return analitico.JOB_TYPE
         if item_id.startswith(analitico.MODEL_PREFIX):
             return analitico.MODEL_TYPE
+        if item_id.startswith(analitico.NOTEBOOK_PREFIX):
+            return analitico.NOTEBOOK_TYPE
         if item_id.startswith(analitico.PLUGIN_PREFIX):
             return analitico.PLUGIN_TYPE
         if item_id.startswith(analitico.RECIPE_PREFIX):
