@@ -7,6 +7,7 @@ from .interfaces import IDataframePlugin, plugin
 ## TransformDataframePlugin
 ##
 
+
 @plugin
 class TransformDataframePlugin(IDataframePlugin):
     """

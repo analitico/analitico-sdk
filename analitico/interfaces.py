@@ -124,7 +124,14 @@ class IFactory(AttributeMixin):
             return
         if not plugin.Meta.name in IFactory.__plugins:
             IFactory.__plugins[plugin.Meta.name] = plugin
-            print("Plugin: %s registered" % plugin.Meta.name)
+            # print("Plugin: %s registered" % plugin.Meta.name)
+
+    def DRAFTrun_plugin(self, *args, action=None, **kwargs):
+        try:
+            plugin = self.get_plugin(**kwargs)
+            return plugin.run(*args, action)
+        except Exception as e:
+            self.exception("An error occoured while running plugin")
 
     ##
     ## Factory methods

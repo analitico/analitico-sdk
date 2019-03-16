@@ -28,8 +28,8 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
 
             info_url = "analitico://datasets/" + dataset_id + "/data/info"
             self.info("reading: %s", info_url)
-            info = self.factory.get_url_json(info_url)
-            schema = info.get("schema") if info else None
+            info = self.factory.get_url_json(info_url)["data"]
+            schema = info.get("schema", None)
 
             if not schema:
                 self.exception("DatasetSourcePlugin - %s does not contain a schema", info_url)
