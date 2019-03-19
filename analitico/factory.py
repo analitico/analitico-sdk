@@ -23,6 +23,8 @@ from analitico.utilities import id_generator
 # this import is not here.
 import analitico.plugin
 
+# read http streams in large-ish chunks
+HTTP_BUFFER_SIZE = 32 * 1024 * 1024
 
 class Factory(IFactory):
     """ A factory for analitico objects implemented via API endpoint calls """
@@ -77,8 +79,8 @@ class Factory(IFactory):
             # if not cached already, download and cache
             cache_temp_file = cache_file + ".tmp_" + id_generator()
             with open(cache_temp_file, "wb") as f:
-                for b in stream:
-                    f.write(b)
+                for chunk in iter(lambda: stream.read(HTTP_BUFFER_SIZE), b''):
+                    f.write(chunk)
             os.rename(cache_temp_file, cache_file)
         # return stream from cached file
         return open(cache_file, "rb"), cache_file
