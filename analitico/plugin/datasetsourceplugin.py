@@ -22,9 +22,11 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
     def retrieve_df(self, *args, action=None, **kwargs):
         """ Retrieve dataframe from dataset with id set in plugin's configuration """
         try:
-            dataset_id = self.get_attribute("source.dataset_id")
+            dataset_id = self.get_attribute("dataset_id")
             if not dataset_id:
-                self.exception("DatasetSourcePlugin - must specify 'source.dataset_id'")
+                dataset_id = self.get_attribute("source.dataset_id")
+                if not dataset_id:
+                    self.exception("DatasetSourcePlugin - must specify 'dataset_id'")
 
             info_url = "analitico://datasets/" + dataset_id + "/data/info"
             self.info("reading: %s", info_url)
