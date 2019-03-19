@@ -17,7 +17,6 @@ import random
 import string
 import dateutil
 
-from django.conf import settings
 from datetime import datetime
 
 try:
@@ -145,8 +144,8 @@ def get_runtime():
             runtime["github"]["url"] = "https://github.com/analitico/analitico/commit/" + commit_sha
     except Exception as exc:
         runtime["exception"] = str(exc)
-    if settings.DEBUG:
-        runtime["elapsed_ms"] = time_ms(started_on)
+
+    runtime["elapsed_ms"] = time_ms(started_on)
     return runtime
 
 
