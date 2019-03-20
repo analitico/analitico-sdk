@@ -173,9 +173,9 @@ def json_sanitize_dict(dict):
     return sanitized
 
 
-def save_json(data, filename, indent=4):
+def save_json(data, filename, indent=4, encoding="utf8"):
     """ Saves given data in a json file (we love pretty, so prettified by default) """
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding=encoding) as f:
         json.dump(data, f, indent=indent)
 
 
