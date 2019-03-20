@@ -26,6 +26,7 @@ import analitico.plugin
 # read http streams in large-ish chunks
 HTTP_BUFFER_SIZE = 32 * 1024 * 1024
 
+
 class Factory(IFactory):
     """ A factory for analitico objects implemented via API endpoint calls """
 
@@ -78,9 +79,17 @@ class Factory(IFactory):
         if not os.path.isfile(cache_file):
             # if not cached already, download and cache
             cache_temp_file = cache_file + ".tmp_" + id_generator()
+
             with open(cache_temp_file, "wb") as f:
-                for chunk in iter(lambda: stream.read(HTTP_BUFFER_SIZE), b''):
-                    f.write(chunk)
+                if hasattr(stream, "read"):
+                    for chunk in iter(lambda: stream.read(HTTP_BUFFER_SIZE), b""):
+                        f.write(chunk)
+                else:
+                    for b in stream:
+                        f.write(b)
+
+            # TODO add progress bar for slow downloads https://github.com/tqdm/tqdm#iterable-based
+
             os.rename(cache_temp_file, cache_file)
         # return stream from cached file
         return open(cache_file, "rb"), cache_file
