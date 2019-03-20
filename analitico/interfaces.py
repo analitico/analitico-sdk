@@ -97,7 +97,7 @@ class IFactory(AttributeMixin):
     ## Plugins
     ##
 
-    def get_plugin(self, name: str, scope=None, **kwargs):
+    def get_plugin(self, name: str, **kwargs):
         """
         Create a plugin given its name and the environment it will run in.
         Any additional parameters passed to this method will be passed to the
@@ -112,6 +112,18 @@ class IFactory(AttributeMixin):
             return (IFactory.__plugins[name])(factory=self, **kwargs)
         except Exception as exc:
             self.exception("IFactory.get_plugin - error while creating " + name, exception=exc)
+
+    def run_plugin(self, *args, settings, **kwargs):
+        """ 
+        Runs a plugin and returns its results. Takes a number of positional and named arguments
+        which are passed to the plugin for execution and a dictionary of settings used to create
+        the plugin. If settings are passed as an array, the method will create a pipeline plugin
+        which will execute the plugins in a chain.
+        """
+        if isinstance(settings, list):
+            settings = {"name": "analitico.plugin.PipelinePlugin", "plugins": settings}
+        plugin = self.get_plugin(**settings)
+        return plugin.run(*args, **kwargs)
 
     def get_plugins(self):
         """ Returns a list of registered plugin classes """
