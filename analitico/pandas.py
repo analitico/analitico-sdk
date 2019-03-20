@@ -25,6 +25,7 @@ except Exception:
     pass
 
 import analitico.schema
+import analitico.utilities
 from analitico.schema import analitico_to_pandas_type, NA_VALUES
 
 ##
@@ -100,6 +101,21 @@ def pd_read_csv(filepath_or_buffer, schema=None):
         # reorder, filter, apply types, rename columns as requested in schema
         df = analitico.schema.apply_schema(df, schema)
     return df
+
+
+def pd_to_csv(df: pd.DataFrame, filename, schema=False, samples=0):
+    """ Writes dataframe to disk optionally adding a .schema file and a .samples file """
+    if not filename.endswith(".csv"):
+        raise Exception("pd_to_csv - filename " + filename + " should end in .csv")
+    df.to_csv(filename, encoding="utf-8")
+    if schema:
+        schema = analitico.schema.generate_schema(df)
+        schemaname = filename[:-4] + ".schema.json"
+        analitico.utilities.save_json(schema, schemaname)
+    if samples > 0 and len(df) > 0:
+        samples = pd_sample(df, samples)
+        samplesname = filename[:-4] + ".samples.csv"
+        samples.to_csv(samplesname, encoding="utf-8")
 
 
 def pd_drop_column(df, column, inplace=False):
