@@ -176,10 +176,11 @@ def apply_schema(df: pd.DataFrame, schema):
         names = []
         for column in schema["columns"]:
             name = column["name"]
-            names.append(name)
             apply_column(df, column)
             if "rename" in column:
-                rename[column["name"]] = column["rename"]
+                df.rename(columns={name: column["rename"]}, inplace=True)
+                name = column["rename"]
+            names.append(name)
         # reorder and remove extra columns
         df = df[names]
 
