@@ -110,13 +110,12 @@ def pd_to_csv(df: pd.DataFrame, filename, schema=False, samples=0):
     df.to_csv(filename, encoding="utf-8")
     if schema:
         schema = analitico.schema.generate_schema(df)
-        schemaname = filename[:-4] + ".schema.json"
-        analitico.utilities.save_json(schema, schemaname)
+        schemaname = filename + ".info"
+        analitico.utilities.save_json({ "schema": schema }, schemaname)
     if samples > 0 and len(df) > 0:
         samples = pd_sample(df, samples)
         samplesname = filename[:-4] + ".samples.csv"
         samples.to_csv(samplesname, encoding="utf-8")
-
 
 def pd_drop_column(df, column, inplace=False):
     """ Drops a column, no exceptions if it's not there """
