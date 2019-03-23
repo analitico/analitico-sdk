@@ -15,7 +15,6 @@ import string
 import dateutil
 from io import StringIO
 
-from django.conf import settings
 from datetime import datetime
 
 try:
@@ -103,7 +102,7 @@ def pd_read_csv(filepath_or_buffer, schema=None):
                         dtype[column["name"]] = analitico_to_pandas_type(column["type"])
 
     # read csv from file or stream
-    df = pd.read_csv(filepath_or_buffer, dtype=dtype, encoding="utf-8", na_values=NA_VALUES)
+    df = pd.read_csv(filepath_or_buffer, dtype=dtype, encoding="utf-8", na_values=NA_VALUES, low_memory=False)
 
     if schema:
         # reorder, filter, apply types, rename columns as requested in schema
