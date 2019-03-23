@@ -359,6 +359,11 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
     def predict(self, data, training, results, *args, **kwargs):
         """ Return predictions from trained model """
+
+        # data should already come in as pd.DataFrame but it's just a dictionary we convert it
+        if not isinstance(data, pd.DataFrame):
+            data = pd.DataFrame.from_dict(data, orient="columns")
+
         # initialize data pool to be tested
         categorical_idx = self.get_categorical_idx(data)
         data_pool = catboost.Pool(data, cat_features=categorical_idx)

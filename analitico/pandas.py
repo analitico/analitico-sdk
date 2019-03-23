@@ -33,6 +33,14 @@ from analitico.schema import analitico_to_pandas_type, NA_VALUES
 ##
 
 
+def pd_print_nulls(df):
+    for column in df:
+        nulls = df[column].isnull().sum()
+        if nulls > 0:
+            perc = 100.0 * nulls / len(df)
+            print("{0} has {1} null values {2:1.2f}%".format(column, nulls, perc))
+
+
 def pd_date_parser(x):
     if not x:
         return None
@@ -111,11 +119,12 @@ def pd_to_csv(df: pd.DataFrame, filename, schema=False, samples=0):
     if schema:
         schema = analitico.schema.generate_schema(df)
         schemaname = filename + ".info"
-        analitico.utilities.save_json({ "schema": schema }, schemaname)
+        analitico.utilities.save_json({"schema": schema}, schemaname)
     if samples > 0 and len(df) > 0:
         samples = pd_sample(df, samples)
         samplesname = filename[:-4] + ".samples.csv"
         samples.to_csv(samplesname, encoding="utf-8")
+
 
 def pd_drop_column(df, column, inplace=False):
     """ Drops a column, no exceptions if it's not there """
