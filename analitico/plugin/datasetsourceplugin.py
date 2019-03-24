@@ -1,3 +1,6 @@
+
+import pandas as pd
+
 import analitico.pandas
 import analitico.utilities
 
@@ -71,6 +74,12 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
 
     def run(self, *args, action=None, **kwargs):
         """ Read data from configured dataset in training mode, noop in prediction mode """
-        if ACTION_TRAIN in action:
-            return self.retrieve_df(*args, action, **kwargs)
-        return args
+
+        # DEPRECATED in training one may leave this plugin in but pass a dataframe for inference
+        # so that the same pipeline can be reused for training and prediction. in this case we will 
+        # do nothing and pass data through
+        if len(args) > 0 and isinstance(args[0], pd.DataFrame):
+            self.factory.warning("DatasetSourcePlugin - passed a DataFrame as input, will noop")
+            return args[0]
+
+        return self.retrieve_df(*args, action, **kwargs)
