@@ -56,16 +56,19 @@ def pd_cast_datetime(df, column):
 
 
 def pd_augment_date(df, column):
-    """ Splits a datetime column into year, month, day, dayofweek, hour, minute then removes the original column """
-    loc = df.columns.get_loc(column) + 1
-    # create separate columns for each parameter
+    """ Augments a datetime column into year, month, day, dayofweek, hour, minute """
+    if column not in df.columns:
+        raise Exception("pd_augment_date - column '" + column + "' is missing")
+    # create separate columns for each parameter (overwrite if needed)
     dates = pd.DatetimeIndex(df[column])
-    df.insert(loc + 1, column + ".year", dates.year.astype("category", copy=False))
-    df.insert(loc + 2, column + ".month", dates.month.astype("category", copy=False))
-    df.insert(loc + 3, column + ".day", dates.day.astype("category", copy=False))
-    df.insert(loc + 4, column + ".hour", dates.hour.astype("category", copy=False))
-    df.insert(loc + 5, column + ".minute", dates.minute.astype("category", copy=False))
-    df.insert(loc + 6, column + ".dayofweek", dates.dayofweek.astype("category", copy=False))
+    df[column + ".year"] = dates.year.astype("category", copy=False)
+    df[column + ".month"] = dates.month.astype("category", copy=False)
+    df[column + ".day"] = dates.day.astype("category", copy=False)
+    df[column + ".hour"] = dates.hour.astype("category", copy=False)
+    df[column + ".minute"] = dates.minute.astype("category", copy=False)
+    df[column + ".dayofweek"] = dates.dayofweek.astype("category", copy=False)
+    # TODO place augmented columns next to original
+    # loc = df.columns.get_loc(column) + 1
     # df.drop([column], axis=1, inplace=True)
 
 
