@@ -18,15 +18,8 @@ import analitico.utilities
 from analitico.dataset import Dataset
 from analitico.utilities import id_generator
 
-# TODO maybe NOT needed
-# We need to import this library here even though we don't
-# use it directly below because we are instantiating the
-# plugins by name from globals() and they won't be found if
-# this import is not here.
-#import analitico.plugin
-
-# read http streams in large-ish chunks
-HTTP_BUFFER_SIZE = 32 * 1024 * 1024
+# read http streams in chunks
+HTTP_BUFFER_SIZE = 32 * 1024 * 1024 # 32 MiBs
 
 
 class Factory(AttributeMixin):
@@ -79,17 +72,18 @@ class Factory(AttributeMixin):
     ## Temp and cache directories
     ##
 
-    # Temporary directory used during factory use
-    _temporary_directory = None
+    # Temporary directory which is deleted when factory is disposed
+    _temp_directory = None
 
     # Artifacts end up in the current working directory
     _artifacts_directory = os.getcwd()
 
-    def get_temporary_directory(self, prefix=None):
+    def get_temporary_directory(self):
         """ Temporary directory that can be used while a factory is used and deleted afterwards """
-        if self._temporary_directory is None:
-            self._temporary_directory = tempfile.mkdtemp(prefix=prefix)
-        return self._temporary_directory
+        temp_dir = os.path.join(tempfile.gettempdir(), "analitico_temp")
+        if not os.path.isdir(temp_dir):
+            os.mkdir(temp_dir)
+        return temp_dir
 
     def get_artifacts_directory(self):
         """ 
@@ -101,10 +95,10 @@ class Factory(AttributeMixin):
 
     def get_cache_directory(self):
         """ Returns directory to be used for caches """
-        cache_path = os.path.join(tempfile.gettempdir(), "analitico_cache")
-        if not os.path.isdir(cache_path):
-            os.mkdir(cache_path)
-        return cache_path
+        cache_dir = os.path.join(tempfile.gettempdir(), "analitico_cache")
+        if not os.path.isdir(cache_dir):
+            os.mkdir(cache_dir)
+        return cache_dir
 
     def get_cache_filename(self, unique_id):
         """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
@@ -229,7 +223,6 @@ class Factory(AttributeMixin):
         """ Returns a list of registered plugin classes """
         return Factory.__plugins
 
-
     ##
     ## Factory methods
     ##
@@ -283,7 +276,6 @@ class Factory(AttributeMixin):
         # can be run in Jupyter with all its plugins, etc.
         plugin = self.get_plugin(**plugin_settings)
         return Dataset(self, plugin=plugin)
-
 
     ##
     ## Logging
@@ -361,6 +353,5 @@ class Factory(AttributeMixin):
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        """ Delete any temporary files upon exiting """
-        if self._temporary_directory:
-            shutil.rmtree(self._temporary_directory, ignore_errors=True)
+        """ Leave any temporary files upon exiting """
+        pass

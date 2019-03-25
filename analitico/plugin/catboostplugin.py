@@ -315,6 +315,8 @@ class CatBoostPlugin(IAlgorithmPlugin):
 
             # save some training data for debugging
             artifacts_path = self.factory.get_artifacts_directory()
+            self.info("artifacts_path: %s", artifacts_path)
+
             samples_df = analitico.pandas.pd_sample(train_df, 200)
             samples_path = os.path.join(artifacts_path, "training-samples.json")
             samples_df.to_json(samples_path, orient="records")
