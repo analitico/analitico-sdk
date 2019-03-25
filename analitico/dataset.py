@@ -1,7 +1,6 @@
 import pandas as pd
 
 import analitico.mixin
-import analitico.plugin
 
 ##
 ## Dataset
@@ -17,9 +16,7 @@ class Dataset(analitico.mixin.AttributeMixin):
         super().__init__(**kwargs)
         if "plugin" in kwargs:
             if not factory:
-                raise analitico.plugin.PluginError(
-                    "Dataset should be initialized with a factory so it can create plugins"
-                )
+                raise Exception("Dataset should be initialized with a factory so it can create plugins")
             self.plugin = kwargs["plugin"]
             if isinstance(self.plugin, dict):
                 self.plugin = factory.get_plugin(**self.plugin)

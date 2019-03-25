@@ -1,34 +1,36 @@
 import tempfile
 import shutil
+import os
 import os.path
 import requests
 import json
 import re
-import hashlib
 import logging
+import hashlib
+import inspect
+import urllib.parse
 
-from urllib.parse import urlparse
-from io import BytesIO, StringIO
+from .mixin import AttributeMixin
+from .exceptions import AnaliticoException
+from .status import STATUS_FAILED
 
 import analitico.utilities
-
-from analitico.interfaces import IFactory
-from analitico.plugin import PluginError
 from analitico.dataset import Dataset
 from analitico.utilities import id_generator
 
+# TODO maybe NOT needed
 # We need to import this library here even though we don't
 # use it directly below because we are instantiating the
 # plugins by name from globals() and they won't be found if
 # this import is not here.
-import analitico.plugin
+#import analitico.plugin
 
 # read http streams in large-ish chunks
 HTTP_BUFFER_SIZE = 32 * 1024 * 1024
 
 
-class Factory(IFactory):
-    """ A factory for analitico objects implemented via API endpoint calls """
+class Factory(AttributeMixin):
+    """ A base class providing runtime services like notebook and plugin creation, storage, network, etc """
 
     def __init__(self, token=None, endpoint=None, **kwargs):
         super().__init__(**kwargs)
@@ -40,24 +42,62 @@ class Factory(IFactory):
             self.set_attribute("endpoint", endpoint)
 
     ##
+    ## Properties and factory context
+    ##
+
+    @property
+    def logger(self):
+        """ Returns logger wrapped into an adapter that adds contextual information from the factory """
+        return self.get_logger()
+
+    @property
+    def job(self):
+        """ Job running on the server (optional) """
+        return self.get_attribute("job")
+
+    @property
+    def workspace(self):
+        """ Workspace context in which this factory runs (optional) """
+        return self.get_attribute("workspace")
+
+    @property
+    def token(self):
+        """ API token used to call endpoint (optional) """
+        return self.get_attribute("token")
+
+    @property
+    def endpoint(self):
+        """ Endpoint used to call analitico APIs """
+        return self.get_attribute("endpoint")
+
+    @property
+    def request(self):
+        """ Request used as context when running on the server or running async jobs (optional) """
+        return self.get_attribute("request")
+
+    ##
     ## Temp and cache directories
     ##
 
-    # Temporary directory used during plugin execution
+    # Temporary directory used during factory use
     _temporary_directory = None
 
+    # Artifacts end up in the current working directory
+    _artifacts_directory = os.getcwd()
+
     def get_temporary_directory(self, prefix=None):
-        """ Temporary directory that can be used while a plugin runs and is deleted afterwards """
+        """ Temporary directory that can be used while a factory is used and deleted afterwards """
         if self._temporary_directory is None:
             self._temporary_directory = tempfile.mkdtemp(prefix=prefix)
         return self._temporary_directory
 
     def get_artifacts_directory(self):
-        """ Plugins save artifacts in subdirectory of temp """
-        artifacts = os.path.join(self.get_temporary_directory(), "artifacts")
-        if not os.path.isdir(artifacts):
-            os.mkdir(artifacts)
-        return artifacts
+        """ 
+        A plugin or notebook can produce various file artifacts during execution and place
+        them in this directory (datasets, statistics, models, etc). A subclass, for example
+        a factory used to run pipelines on the server, may persist files created here to cloud, etc.
+        """
+        return self._artifacts_directory
 
     def get_cache_directory(self):
         """ Returns directory to be used for caches """
@@ -65,6 +105,10 @@ class Factory(IFactory):
         if not os.path.isdir(cache_path):
             os.mkdir(cache_path)
         return cache_path
+
+    def get_cache_filename(self, unique_id):
+        """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
+        return os.path.join(self.get_cache_directory(), "cache_" + hashlib.sha256(unique_id.encode()).hexdigest())
 
     ##
     ## URL retrieval, authorization and caching
@@ -111,11 +155,11 @@ class Factory(IFactory):
         # see if assets uses analitico://workspaces/... scheme
         if url.startswith("analitico://"):
             if not self.endpoint:
-                raise PluginError("Factory is not configured with a valid API endpoint and cannot get: " + url)
+                raise Exception("Factory is not configured with a valid API endpoint and cannot get: " + url)
             url = self.endpoint + url[len("analitico://") :]
 
         try:
-            url_parse = urlparse(url)
+            url_parse = urllib.parse.urlparse(url)
         except Exception:
             pass
         if url_parse and url_parse.scheme in ("http", "https"):
@@ -136,6 +180,55 @@ class Factory(IFactory):
         assert url and isinstance(url, str)
         url_stream = self.get_url_stream(url)
         return json.load(url_stream, encoding="utf-8")
+
+    ##
+    ## Plugins
+    ##
+
+    # dictionary of registered plugins name:class
+    __plugins = {}
+
+    @staticmethod
+    def register_plugin(plugin):
+        if inspect.isabstract(plugin):
+            print("Factory.register_plugin: %s is abstract and cannot be registered" % plugin.Meta.name)
+            return
+        if plugin.Meta.name not in Factory.__plugins:
+            Factory.__plugins[plugin.Meta.name] = plugin
+            # print("Plugin: %s registered" % plugin.Meta.name)
+
+    def get_plugin(self, name: str, **kwargs):
+        """
+        Create a plugin given its name and the environment it will run in.
+        Any additional parameters passed to this method will be passed to the
+        plugin initialization code and will be stored as a plugin setting.
+        """
+        try:
+            # deprecated, temporary retrocompatibility 2019-02-24
+            if name == "analitico.plugin.AugmentDatesDataframePlugin":
+                name = "analitico.plugin.AugmentDatesPlugin"
+            if name not in Factory.__plugins:
+                self.exception("Factory.get_plugin - %s is not a registered plugin", name)
+            return (Factory.__plugins[name])(factory=self, **kwargs)
+        except Exception as exc:
+            self.exception("Factory.get_plugin - error while creating " + name, exception=exc)
+
+    def run_plugin(self, *args, settings, **kwargs):
+        """ 
+        Runs a plugin and returns its results. Takes a number of positional and named arguments
+        which are passed to the plugin for execution and a dictionary of settings used to create
+        the plugin. If settings are passed as an array, the method will create a pipeline plugin
+        which will execute the plugins in a chain.
+        """
+        if isinstance(settings, list):
+            settings = {"name": "analitico.plugin.PipelinePlugin", "plugins": settings}
+        plugin = self.get_plugin(**settings)
+        return plugin.run(*args, **kwargs)
+
+    def get_plugins(self):
+        """ Returns a list of registered plugin classes """
+        return Factory.__plugins
+
 
     ##
     ## Factory methods
@@ -190,6 +283,75 @@ class Factory(IFactory):
         # can be run in Jupyter with all its plugins, etc.
         plugin = self.get_plugin(**plugin_settings)
         return Dataset(self, plugin=plugin)
+
+
+    ##
+    ## Logging
+    ##
+
+    class LogAdapter(logging.LoggerAdapter):
+        """ A simple adapter which will call "process" on every log record to enrich it with contextual information from the Factory. """
+
+        factory = None
+
+        def __init__(self, logger, factory):
+            super().__init__(logger, {})
+            self.factory = factory
+
+        def process(self, msg, kwargs):
+            return self.factory.process_log(msg, kwargs)
+
+    def process_log(self, msg, kwargs):
+        """ Moves any kwargs other than 'exc_info' and 'extra' to 'extra' dictionary. """
+        if "extra" not in kwargs:
+            kwargs["extra"] = {}
+
+        extra = kwargs["extra"]
+        for key in kwargs.copy().keys():
+            if key not in ("exc_info", "extra"):
+                extra[key] = kwargs.pop(key)
+
+        for attr_name in ("workspace", "token", "endpoint", "request", "job"):
+            attr = self.get_attribute(attr_name, None)
+            if attr:
+                extra[attr_name] = attr
+        return msg, kwargs
+
+    def set_logger_level(self, level):
+        """ Sets logger level to given level for all future log calls make through the factory logger """
+        self.set_attribute("logger_level", level)
+
+    def get_logger(self, name="analitico"):
+        """ Returns logger wrapped into an adapter that adds contextual information from the Factory """
+        logger_level = self.get_attribute("logger_level", logging.INFO)
+        logger = Factory.LogAdapter(logging.getLogger(name), self)
+        logger.setLevel(logger_level)
+        return logger
+
+    def debug(self, msg, *args, **kwargs):
+        self.logger.log(logging.DEBUG, msg, *args, **kwargs)
+
+    def info(self, msg, *args, **kwargs):
+        self.logger.log(logging.INFO, msg, *args, **kwargs)
+
+    def warning(self, msg, *args, **kwargs):
+        self.logger.log(logging.WARNING, msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        self.logger.log(logging.ERROR, msg, *args, **kwargs)
+
+    def status(self, item, status, **kwargs):
+        """ Updates on the status of an item. Status is one of: created, running, canceled, completed or failed. """
+        level = logging.ERROR if status == STATUS_FAILED else logging.INFO
+        self.logger.log(level, "status: %s, name: %s", status, type(item).__name__, item=item, status=status, **kwargs)
+
+    def exception(self, msg, *args, **kwargs):
+        message = msg % (args)
+        self.error(msg, *args, **kwargs)
+        exception = kwargs.get("exception", None)
+        if exception:
+            raise AnaliticoException(message, **kwargs) from exception
+        raise AnaliticoException(message, **kwargs)
 
     ##
     ## with Factory as: lifecycle methods

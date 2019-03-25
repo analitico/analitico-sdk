@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 # https://github.com/faif/python-patterns
 
 from analitico.mixin import AttributeMixin
-from analitico.interfaces import IFactory
+from analitico.factory import Factory
 from analitico.utilities import time_ms, save_json, read_json
 from analitico.schema import apply_schema
 from analitico.constants import PLUGIN_PREFIX
@@ -30,8 +30,8 @@ class IPlugin(ABC, AttributeMixin):
 
         name = None
 
-    # IFactory that provides runtime services to the plugin (eg: loading assets, etc)
-    factory: IFactory = None
+    # Factory that provides runtime services to the plugin (eg: loading assets, etc)
+    factory: Factory = None
 
     @property
     def id(self):
@@ -344,7 +344,7 @@ class PluginError(Exception):
 
 def plugin(cls):
     """ Use this @plugin decorator on IPlugin classes to register them automatically """
-    IFactory.register_plugin(cls)
+    Factory.register_plugin(cls)
     return cls
 
 
