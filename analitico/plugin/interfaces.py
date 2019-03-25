@@ -260,6 +260,10 @@ class IAlgorithmPlugin(IPlugin):
         # load model, calculate predictions
         results = self.predict(data, training, results, *args, **kwargs)
         results["performance"]["total_ms"] = time_ms(started_on)
+
+        results_path = os.path.join(artifacts_path, "results.json")
+        save_json(results, results_path)
+
         return results
 
     def run(self, *args, action=None, **kwargs):
