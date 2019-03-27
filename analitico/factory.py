@@ -34,6 +34,11 @@ class Factory(AttributeMixin):
             assert endpoint.startswith("http")
             self.set_attribute("endpoint", endpoint)
 
+        # use current working directory at the time when the factory
+        # is created so that the caller can setup a temp directory we
+        # should work in 
+        self._artifacts_directory = os.getcwd()
+
     ##
     ## Properties and factory context
     ##
@@ -76,7 +81,7 @@ class Factory(AttributeMixin):
     _temp_directory = None
 
     # Artifacts end up in the current working directory
-    _artifacts_directory = os.getcwd()
+    _artifacts_directory = None
 
     def get_temporary_directory(self):
         """ Temporary directory that can be used while a factory is used and deleted afterwards """
