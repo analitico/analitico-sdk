@@ -12,14 +12,18 @@ import analitico.status
 def authorize(token=None, endpoint=ANALITICO_STAGING_API_ENDPOINT) -> analitico.factory.Factory:
     """ Returns an API factory which can create datasets, models, run notebooks, plugins, etc """
     try:
-        import api.factory
+        # TODO: we could go up the call stack and find the first factory we can and use that
+
+        # import api.factory
 
         # if we have api.factory installed, it means that we're running in a server or runner
         # context. we should use a server factory which will access models and data directly
         # rather than via APIs. we should not have the factory create its own temporary directory
         # since we're most likely running within the context of a job or notebook which will be
         # cleaned up automatically anyway
-        return api.factory.ServerFactory(token=token, endpoint=endpoint, mkdtemp=False)
+
+        # return api.factory.ServerFactory(token=token, endpoint=endpoint, mkdtemp=False)
+        pass
     except:
         pass
 
