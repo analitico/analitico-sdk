@@ -4,7 +4,7 @@ import analitico.pandas
 import analitico.utilities
 
 from analitico.constants import ACTION_TRAIN
-from analitico.utilities import time_ms, timeit
+from analitico.utilities import time_ms, timeit, get_dict_dot
 
 from .interfaces import IDataframeSourcePlugin, plugin
 
@@ -32,11 +32,11 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
 
             info_url = "analitico://datasets/" + dataset_id + "/data/info"
             self.info("reading: %s", info_url)
-            info = self.factory.get_url_json(info_url)["data"]
-            schema = info.get("schema", None)
 
+            info = self.factory.get_url_json(info_url)
+            schema = get_dict_dot(info, "data.schema", None)
             if not schema:
-                self.exception("DatasetSourcePlugin - %s does not contain a schema", info_url)
+                self.warning("DatasetSourcePlugin - %s does not contain schema information", info_url)
 
             # save the schema for the source so it can be used to enforce it on prediction
             self.set_attribute("source.schema", schema)
@@ -44,9 +44,6 @@ class DatasetSourcePlugin(IDataframeSourcePlugin):
             # stream data from dataset endpoint or storage as csv
             csv_url = "analitico://datasets/" + dataset_id + "/data/csv"
             csv_stream = self.factory.get_url_stream(csv_url, binary=False)
-
-            # TODO restore schema validation, off because outofstock has errors
-            schema = None
 
             reading_on = time_ms()
             self.info("reading: %s", csv_url)
