@@ -1,6 +1,3 @@
-# Utility methods to process dataframes and simplify workflow.
-# Copyright (C) 2018 by Analitico.ai. All rights reserved.
-
 import os
 import time
 import pandas as pd
@@ -46,6 +43,11 @@ def id_generator(size=9, chars=string.ascii_letters + string.digits):
 
 MB = 1024 * 1024
 
+def get_runtime_brief():
+    """ A digest version of get_runtime to be used more frequently """
+    return {
+        "cpu_count": multiprocessing.cpu_count()
+        }
 
 def get_gpu_runtime():
     """ Returns array of GPU specs (if discoverable) """

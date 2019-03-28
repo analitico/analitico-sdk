@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 
 from analitico.mixin import AttributeMixin
 from analitico.factory import Factory
-from analitico.utilities import time_ms, save_json, read_json
+from analitico.utilities import time_ms, save_json, read_json, get_runtime_brief
 from analitico.schema import apply_schema
 from analitico.constants import PLUGIN_PREFIX
 
@@ -208,7 +208,7 @@ class IAlgorithmPlugin(IPlugin):
                 "data": {},  # number of records, etc
                 "parameters": {},  # model parameters, hyperparameters
                 "scores": {},  # training scores
-                "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
+                "performance": get_runtime_brief(),  # time elapsed, cpu, gpu, memory, disk, etc
             }
         )
 
@@ -241,14 +241,13 @@ class IAlgorithmPlugin(IPlugin):
         results = collections.OrderedDict(
             {
                 "type": "analitico/prediction",
-                "endpoint_id": None,
-                "model_id": None,
-                "job_id": None,
-                "records": None,  # original data
-                "processed": None,  # processed (augmented) data
-                "predictions": None,  # predictions
-                "probabilities": None,
-                "performance": {"cpu_count": multiprocessing.cpu_count()},  # time elapsed, cpu, gpu, memory, disk, etc
+                # "endpoint_id": None,
+                # "model_id": None,
+                # "job_id": None,
+                # "records": None,  # processed (augmented) data will be added by IAlgorithm
+                # "predictions": None,  # predictions
+                # "probabilities": None,
+                "performance": get_runtime_brief(),  # time elapsed, cpu, gpu, memory, disk, etc
             }
         )
 

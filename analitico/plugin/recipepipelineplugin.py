@@ -66,10 +66,7 @@ class RecipePipelinePlugin(PipelinePlugin):
             if isinstance(args[0], pd.DataFrame):
                 df_original = args[0]  # original data
                 df = df_original.copy()  # df processed inplace
-
                 predictions = super().run(df, action=action, **kwargs)
-                predictions["records"] = analitico.pandas.pd_to_dict(df_original)
-                predictions["processed"] = analitico.pandas.pd_to_dict(df)
             else:
                 # run the pipeline with generic input return predictions
                 predictions = super().run(*args, action=action, **kwargs)

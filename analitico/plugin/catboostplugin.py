@@ -366,6 +366,13 @@ class CatBoostPlugin(IAlgorithmPlugin):
         if not isinstance(data, pd.DataFrame):
             data = pd.DataFrame.from_dict(data, orient="columns")
 
+        # record that we're predicting on after augmentation is added
+        # to the results. if the endpoint or the jupyter notebook in 
+        # charge of communicating with the caller does not want to send
+        # this information back, it can always take it out. in the future
+        # we may want to optimized here and add this optionally instead.
+        results["records"] = analitico.pandas.pd_to_dict(data)
+
         # initialize data pool to be tested
         categorical_idx = self.get_categorical_idx(data)
         data_pool = catboost.Pool(data, cat_features=categorical_idx)

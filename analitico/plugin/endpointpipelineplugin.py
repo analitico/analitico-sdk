@@ -45,9 +45,11 @@ class EndpointPipelinePlugin(PipelinePlugin):
 
             # run the pipeline, return predictions
             predictions = super().run(df, action=action, **kwargs)
-            predictions["records"] = analitico.pandas.pd_to_dict(df_copy)
-            predictions["processed"] = analitico.pandas.pd_to_dict(df)
 
+            # the predictor has most likely added a "records" field with the processed
+            # records which we may choose to avoid echoing back to the caller. if we want
+            # we can remove the records here before returning
+            
             return predictions
 
         except Exception as exc:
