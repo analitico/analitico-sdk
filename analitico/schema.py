@@ -97,10 +97,6 @@ def generate_schema(df: pd.DataFrame) -> dict:
     columns = []
     
     columns_names = df.columns.tolist()
-    if df.index.name:
-        if df.index.name not in columns_names:
-            columns_names.add(df.index.name)
-
     for name in columns_names:
         ctype = pandas_to_analitico_type(df[name].dtype)
         column = {"name": name, "type": ctype}
