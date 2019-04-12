@@ -95,7 +95,13 @@ def get_column_type(df, column):
 def generate_schema(df: pd.DataFrame) -> dict:
     """ Generates an analitico schema from a pandas dataframe """
     columns = []
-    for name in df.columns:
+    
+    columns_names = df.columns.tolist()
+    if df.index.name:
+        if df.index.name not in columns_names:
+            columns_names.add(df.index.name)
+
+    for name in columns_names:
         ctype = pandas_to_analitico_type(df[name].dtype)
         column = {"name": name, "type": ctype}
         if df.index.name == name:
@@ -154,11 +160,19 @@ def apply_column(df: pd.DataFrame, column):
                 "apply_column - exception while applying type '" + column_type + "' to column '" + column_name + "'"
             ) from exc
 
+    if "rename" in column:
+        df.rename(index=str, columns={ column_name: column["rename"]}, inplace=True)
+        column_name = column["rename"]
+
     # make requested column index
     index = column.get("index", False)
     if index:
+        # we use this column as the index but do not remove it from
+        # the columns otherwise we won't be able to rename it, etc
         df.set_index(column_name, drop=False, inplace=True)
 
+    assert column_name in df.columns
+    return df[column_name]
 
 def apply_schema(df: pd.DataFrame, schema):
     """ 
@@ -169,9 +183,6 @@ def apply_schema(df: pd.DataFrame, schema):
     assert isinstance(df, pd.DataFrame), "apply_schema should be passed a pd.DataFrame, received: " + str(df)
     assert isinstance(schema, dict), "apply_schema should be passed a schema dictionary"
 
-    # columns that need renaming with old: new
-    rename = {}
-
     # when a schema contains the 'columns' array, it means that we should
     # apply the given columns transformations and end up with a dataframe
     # containing only the given columns, ordered as specified. if the dataframe
@@ -180,14 +191,10 @@ def apply_schema(df: pd.DataFrame, schema):
         # select columns and apply types to columns
         names = []
         for column in schema["columns"]:
-            name = column["name"]
-            apply_column(df, column)
-            if "rename" in column:
-                df.rename(columns={name: column["rename"]}, inplace=True)
-                name = column["rename"]
-            names.append(name)
+            ds = apply_column(df, column)
+            names.append(ds.name)
         # reorder and remove extra columns
-        df = df[names]
+        return df[names]
 
     # when a schema contains the 'apply' array it means that we should
     # apply the given column transformations to the dataframe. the array
@@ -197,8 +204,6 @@ def apply_schema(df: pd.DataFrame, schema):
     if "apply" in schema:
         for column in schema["apply"]:
             apply_column(df, column)
-            if "rename" in column:
-                rename[column["name"]] = column["rename"]
 
     # if schema has a "drop" array then the columns
     if "drop" in schema:
@@ -206,9 +211,5 @@ def apply_schema(df: pd.DataFrame, schema):
             column_name = column.get("name")
             if column_name and column_name in df.columns:
                 df.drop(columns=[column_name], inplace=True)
-
-    # see if there are columns that need to be renamed
-    if len(rename) > 0:
-        df = df.rename(index=str, columns=rename)
 
     return df

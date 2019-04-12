@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from analitico.schema import generate_schema
+from analitico.schema import generate_schema, apply_schema
 
 from .test_mixin import TestMixin
 
@@ -65,6 +65,62 @@ class DatasetTests(unittest.TestCase, TestMixin):
             # third column would be float, but is cast to string
             self.assertEqual(df.dtypes[2], "O")
             self.assertEqual(df.iloc[2, 2], "32.50")
+        except Exception as exc:
+            raise exc
+
+    def test_dataset_csv4_applyschema_rename(self):
+        """ Test reading a table then renaming a column """
+        try:
+            df = self.read_dataframe_asset("ds_test_4.json")
+            schema = generate_schema(df)
+
+            columns = schema["columns"]
+            self.assertEqual(len(columns), 3)
+            self.assertEqual(df.columns[1], "Second")
+            
+            schema["columns"][1]["rename"] = "Secondo"
+            df = apply_schema(df, schema)
+
+            columns = df.columns
+            self.assertEqual(df.columns[1], "Secondo")
+        except Exception as exc:
+            raise exc
+
+    def test_dataset_csv4_applyschema_index(self):
+        """ Test reading a table then making a column its index """
+        try:
+            df = self.read_dataframe_asset("ds_test_4.json")
+            schema = generate_schema(df)
+
+            columns = schema["columns"]
+            self.assertEqual(len(columns), 3)
+            self.assertEqual(df.index.name, None)
+            
+            schema["columns"][0]["index"] = True
+            df = apply_schema(df, schema)
+
+            columns = df.columns
+            self.assertEqual(df.index.name, "First")
+        except Exception as exc:
+            raise exc
+
+    def test_dataset_csv4_applyschema_index_rename(self):
+        """ Test reading a table then making a column its index then renaming it """
+        try:
+            df = self.read_dataframe_asset("ds_test_4.json")
+            schema = generate_schema(df)
+
+            columns = schema["columns"]
+            self.assertEqual(len(columns), 3)
+            self.assertEqual(df.index.name, None)
+            
+            schema["columns"][0]["index"] = True
+            schema["columns"][0]["rename"] = "Primo"
+            df = apply_schema(df, schema)
+
+            columns = df.columns
+            self.assertEqual(df.index.name, "Primo")
+            self.assertEqual(df.columns[0], "Primo")
         except Exception as exc:
             raise exc
 
