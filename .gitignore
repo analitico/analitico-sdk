@@ -3,3 +3,4 @@ build
 analitico.egg-info
 .eggs
 .DS_Store
+/dist/*
