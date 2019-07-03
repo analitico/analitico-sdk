@@ -5,3 +5,4 @@ from .test_dataset import DatasetTests
 from .test_factory import FactoryTests
 from .test_mixin import TestMixin
 from .test_plugin import PluginTests
+from .test_metadata import MetadataTests

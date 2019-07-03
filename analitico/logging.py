@@ -1,4 +1,3 @@
-
 import logging
 import logging.config
 import time
@@ -10,28 +9,28 @@ from datetime import datetime
 # https://github.com/marselester/json-log-formatter
 
 BUILTIN_ATTRS = {
-    'args',
-    'asctime',
-    'created',
-    'exc_info',
-    'exc_text',
-    'filename',
-    'funcName',
-    'levelname',
-    'levelno',
-    'lineno',
-    'module',
-    'msecs',
-    'message',
-    'msg',
-    'name',
-    'pathname',
-    'process',
-    'processName',
-    'relativeCreated',
-    'stack_info',
-    'thread',
-    'threadName',
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "module",
+    "msecs",
+    "message",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
 }
 
 
@@ -88,9 +87,7 @@ class FluentdFormatter(logging.Formatter):
         The `extra` keyword argument is used to populate the `__dict__` of the `LogRecord`.
         """
         return {
-            attr_name: record.__dict__[attr_name]
-            for attr_name in record.__dict__
-            if attr_name not in BUILTIN_ATTRS
+            attr_name: record.__dict__[attr_name] for attr_name in record.__dict__ if attr_name not in BUILTIN_ATTRS
         }
 
     def json_record(self, message, extra, record):
@@ -104,14 +101,14 @@ class FluentdFormatter(logging.Formatter):
         :return: Dictionary which will be passed to JSON lib.
         """
         extra["level"] = record.levelname.lower()
-        if 'ts' not in extra:
-            extra['ts'] = datetime.utcnow()
+        if "ts" not in extra:
+            extra["ts"] = datetime.utcnow()
         extra["logger"] = record.name
         if record.funcName and record.lineno:
-          extra["caller"] = record.funcName + ":" + str(record.lineno)
-        extra['msg'] = message
+            extra["caller"] = record.funcName + ":" + str(record.lineno)
+        extra["msg"] = message
         if record.exc_info:
-            extra['exc_info'] = self.formatException(record.exc_info)
+            extra["exc_info"] = self.formatException(record.exc_info)
         return extra
 
     def mutate_json_record(self, json_record):
