@@ -3,6 +3,9 @@ import json
 import logging
 import collections
 
+import sklearn
+import sklearn.metrics
+
 from analitico.utilities import read_json, save_json, get_dict_dot, set_dict_dot
 
 # model metadata is saved in training.json
@@ -56,3 +59,32 @@ def set_score(
             set_dict_dot(metadata, f"scores.{category}.subtitle", category_subtitle)
 
     save_json(metadata, METADATA_FILENAME)
+
+
+def set_model_scores(model, y_true, y_pred):
+    """
+    Takes a model (derived from sklearn base estimator) and two array of values
+    and predictions and saves a number of statistical scores regarding the accuracy
+    of the predictions.
+    """
+    # model is a sklearn estimator_?
+    if isinstance(model, sklearn.base.BaseEstimator):
+        if sklearn.base.is_regressor(model):
+            mean_abs_error = round(sklearn.metrics.mean_absolute_error(y_true, y_pred), 5)
+            set_score(
+                score="mean_abs_error",
+                value=mean_abs_error,
+                title="Mean absolute regression loss",
+                subtitle="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html",
+                category="sklearn_metrics",
+                category_title="Scikit Learn Metrics"
+            )
+
+        if sklearn.base.is_classifier(model):
+            log_loss = round(sklearn.metrics.log_loss(y_true, y_pred), 5)
+            set_score(
+                score="log_loss",
+                value=log_loss,
+                title="Log loss, aka logistic loss or cross-entropy loss",
+                subtitle="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html",
+            )

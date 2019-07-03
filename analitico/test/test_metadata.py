@@ -3,6 +3,14 @@ import tempfile
 import numpy as np
 import os
 
+
+from sklearn import datasets
+from sklearn import linear_model
+import sklearn
+import statistics
+
+import pandas
+
 from analitico.metadata import *
 
 
@@ -91,3 +99,21 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["category2"]["metric2"]["value"], "hello")
         self.assertEqual(metadata["scores"]["category2"]["metric2"]["priority"], 1)
         self.assertEqual(metadata["scores"]["category2"]["metric2"]["title"], "VIP Metric")
+
+    def test_metadata_scores_scikit_boston(self):
+        data = sklearn.datasets.load_boston()
+        df = pandas.DataFrame(data.data, columns=data.feature_names)
+        target = pandas.DataFrame(data.target, columns=["MEDV"])
+
+        X = df
+        y_true = target["MEDV"]
+        lm = linear_model.LinearRegression()
+        model = lm.fit(X, y_true)
+        y_pred = lm.predict(X)
+
+        # save a variety of scores derived from model, data and predictions
+        set_model_scores(model, y_true, y_pred)
+
+        scores = get_metadata()["scores"]["sklearn_metrics"]
+        self.assertIn("mean_abs_error", scores)
+        self.assertAlmostEqual(scores["mean_abs_error"]["value"], 3.27086, 2)
