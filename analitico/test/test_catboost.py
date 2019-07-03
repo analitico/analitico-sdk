@@ -1,7 +1,7 @@
 import unittest
 import os
 import os.path
-
+import pytest
 import pandas as pd
 
 import sklearn.metrics
@@ -16,6 +16,7 @@ from .test_mixin import TestMixin
 ASSETS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/assets"
 
 
+@pytest.mark.django_db
 class CatBoostTests(unittest.TestCase, TestMixin):
     """ Unit testing of machine learning algorithms """
 
@@ -114,7 +115,7 @@ class CatBoostTests(unittest.TestCase, TestMixin):
 
         except Exception as exc:
             factory.error("test_catboost_multiclass_classifier_prediction - " + str(exc))
-            pass
+            raise exc
 
     def test_catboost_binary_classifier_prediction_with_labels(self):
         """ Test predictions with catboost as a binary classifier (using labels instead of int) """

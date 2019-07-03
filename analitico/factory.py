@@ -1,5 +1,4 @@
 import tempfile
-import shutil
 import os
 import os.path
 import requests
@@ -9,6 +8,9 @@ import logging
 import hashlib
 import inspect
 import urllib.parse
+import io
+import pandas as pd
+import tempfile
 
 from .mixin import AttributeMixin
 from .exceptions import AnaliticoException
@@ -19,7 +21,7 @@ from analitico.dataset import Dataset
 from analitico.utilities import id_generator
 
 # read http streams in chunks
-HTTP_BUFFER_SIZE = 32 * 1024 * 1024 # 32 MiBs
+HTTP_BUFFER_SIZE = 32 * 1024 * 1024  # 32 MiBs
 
 
 class Factory(AttributeMixin):
@@ -36,7 +38,7 @@ class Factory(AttributeMixin):
 
         # use current working directory at the time when the factory
         # is created so that the caller can setup a temp directory we
-        # should work in 
+        # should work in
         self._artifacts_directory = os.getcwd()
 
     ##
@@ -107,7 +109,8 @@ class Factory(AttributeMixin):
 
     def get_cache_filename(self, unique_id):
         """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
-        return os.path.join(self.get_cache_directory(), "cache_" + hashlib.sha256(unique_id.encode()).hexdigest())
+        # Tip: if cache contents need to be invalidated for whatever reason, you can change the prefix below...
+        return os.path.join(self.get_cache_directory(), "cache_v2_" + hashlib.sha256(unique_id.encode()).hexdigest())
 
     ##
     ## URL retrieval, authorization and caching
@@ -115,6 +118,9 @@ class Factory(AttributeMixin):
 
     # regular expression used to detect assets using analitico:// scheme
     ANALITICO_ASSET_RE = r"(analitico://workspaces/(?P<workspace_id>[-\w.]{4,256})/)"
+
+    # TODO could check if it would be possible to switch to an external caching library, eg:
+    # https://github.com/ionrock/cachecontrol
 
     def get_cached_stream(self, stream, unique_id):
         """ Will cache a stream on disk based on a unique_id (like md5 or etag) and return file stream and filename """
@@ -137,7 +143,7 @@ class Factory(AttributeMixin):
         # return stream from cached file
         return open(cache_file, "rb"), cache_file
 
-    def get_url_stream(self, url, binary=False):
+    def get_url_stream(self, url, binary=False, cache=True):
         """
         Returns a stream to the given url. This works for regular http:// or https://
         and also works for analitico:// assets which are converted to calls to the given
@@ -166,13 +172,20 @@ class Factory(AttributeMixin):
             if url_parse.hostname and url_parse.hostname.endswith("analitico.ai") and self.token:
                 # if url is connecting to analitico.ai add token
                 headers = {"Authorization": "Bearer " + self.token}
+
+            # we should not take the raw response stream here as it could be gzipped or encoded.
+            # we take the decoded content as a text string and turn it into a stream or we take the
+            # decompressed binary content and also turn it into a stream.
             response = requests.get(url, stream=True, headers=headers)
 
-            if "etag" in response.headers:
+            # always treat content as binary, utf-8 encoding is done by readers
+            response_stream = io.BytesIO(response.content)
+
+            if cache and "etag" in response.headers:
                 etag = response.headers["etag"]
                 if etag:
-                    return self.get_cached_stream(response.raw, url + etag)[0]
-            return response.raw
+                    return self.get_cached_stream(response_stream, url + etag)[0]
+            return response_stream
         return open(url, "rb")
 
     def get_url_json(self, url):
@@ -264,8 +277,8 @@ class Factory(AttributeMixin):
 
     def get_item(self, item_id):
         """ Retrieves item from the server by item_id """
-        assert item_id and isinstance(item_id, str)
-        url = "{}/{}s/{}".format(self.endpoint, self.get_item_type(item_id), item_id)
+        assert item_id and isinstance(item_id, str) and self.endpoint.endswith("/")
+        url = "{}{}s/{}".format(self.endpoint, self.get_item_type(item_id), item_id)
         return self.get_url_json(url)
 
     def get_dataset(self, dataset_id):
@@ -360,3 +373,37 @@ class Factory(AttributeMixin):
     def __exit__(self, exception_type, exception_value, traceback):
         """ Leave any temporary files upon exiting """
         pass
+
+    ##
+    ## SDK utility methods
+    ##
+
+    def get_dataframe(self, item_id: str) -> pd.DataFrame:
+        """ 
+        Returns the processed data from the given dataset in Analitico as a pandas DataFrame object. 
+        """
+        df = self.run_plugin(settings={"name": "analitico.plugin.DatasetSourcePlugin", "dataset_id": item_id})
+        return df
+
+    def upload(self, item_id: str, df: pd.DataFrame, filename: str = "data.parquet"):
+
+        # if not (filename.startswith("data/") or filename.startswith("assets/")):
+        #    raise AnaliticoException("Filename should start with assets/ or data/")
+
+        item_type = self.get_item_type(item_id)
+        url = f"{self.endpoint}{item_type}s/{item_id}/assets/{filename}"
+
+        if filename.endswith(".parquet"):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath = os.path.join(tmpdir, filename)
+                df.to_parquet(filepath)
+                response = requests.post(
+                    url, files={"file": filepath}, headers={"Authorization": "Bearer " + self.token}
+                )
+                if response.status_code != 201:
+                    raise AnaliticoException(
+                        f"Asset {filename} could not be uploaded to item {item_id}", response=response.json()
+                    )
+        else:
+            raise AnaliticoException(f"Did not recognize file format for {filename}")
+        return self.get_item(item_id)

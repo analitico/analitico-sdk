@@ -1,7 +1,6 @@
 import os
 import time
 import pandas as pd
-import json
 import logging
 import socket
 import platform
@@ -13,6 +12,17 @@ import sys
 import random
 import string
 import dateutil
+import re
+import subprocess
+import traceback
+
+from collections import OrderedDict
+
+# use simplejson instead of standard built in library
+# mostly because it has a parameter which supports replacing nan with nulls
+# thus producing json which is ecma compliant and won't have issues being read
+# https://simplejson.readthedocs.io/en/latest/
+import simplejson as json
 
 from datetime import datetime
 
@@ -27,6 +37,85 @@ from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
 
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
+
+
+# RESTful API Design Tips from Experience
+# https://medium.com/studioarmix/learn-restful-api-design-ideals-c5ec915a430f
+
+# Trying to follow this spec for naming, etc
+# https://jsonapi.org/format/#document-top-level
+
+# Following this format for errors:
+# https://jsonapi.org/format/#errors
+
+
+##
+## Exceptions
+##
+
+
+def first_or_list(items):
+    try:
+        if items and len(items) == 1:
+            return items[0]
+    except Exception:
+        pass  # validation errors pass a dictionary so we just pass it through
+    return items
+
+
+def exception_to_dict(exception: Exception, add_context=True, add_formatted=True, add_traceback=True) -> dict:
+    """ Returns a dictionary with detailed information on the given exception and its inner (chained) exceptions """
+
+    # trying to adhere as much as possible to json:api specs here
+    # https://jsonapi.org/format/#errors
+    d = OrderedDict()
+    d["status"] = "500"  # want this to go first
+    d["code"] = type(exception).__name__.lower()
+    d["title"] = str(exception.args[0]) if len(exception.args) > 0 else str(exception)
+    d["meta"] = {}
+
+    if isinstance(exception, AnaliticoException):
+        d["status"] = str(exception.status_code)
+        d["code"] = exception.code
+        d["title"] = exception.message
+        if exception.extra and len(exception.extra) > 0:
+            d["meta"]["extra"] = json_sanitize_dict(exception.extra)
+
+    if add_context and exception.__context__:
+        d["meta"]["context"] = exception_to_dict(
+            exception.__context__, add_context=True, add_formatted=False, add_traceback=False
+        )
+
+    # information on exception currently being handled
+    _, _, exc_traceback = sys.exc_info()
+
+    if add_formatted:
+        # printout of error condition
+        d["meta"]["formatted"] = traceback.format_exception(type(exception), exception, exc_traceback)
+
+    if add_traceback:
+        # extract frame summaries from traceback and convert them
+        # to list of dictionaries with file and line number information
+        d["meta"]["traceback"] = []
+        for fs in traceback.extract_tb(exc_traceback, 20):
+            d["meta"]["traceback"].append(
+                OrderedDict(
+                    {
+                        "summary": "File '{}', line {}, in {}".format(fs.filename, fs.lineno, fs.name),
+                        "filename": fs.filename,
+                        "line": fs.line,
+                        "lineno": fs.lineno,
+                        "name": fs.name,
+                    }
+                )
+            )
+
+    if d["status"] is None:
+        d.pop("status")
+    if len(d["meta"]) < 1:
+        d.pop("meta")
+    return d
+
 
 ##
 ## Crypto
@@ -43,11 +132,11 @@ def id_generator(size=9, chars=string.ascii_letters + string.digits):
 
 MB = 1024 * 1024
 
+
 def get_runtime_brief():
     """ A digest version of get_runtime to be used more frequently """
-    return {
-        "cpu_count": multiprocessing.cpu_count()
-        }
+    return {"cpu_count": multiprocessing.cpu_count()}
+
 
 def get_gpu_runtime():
     """ Returns array of GPU specs (if discoverable) """
@@ -175,10 +264,10 @@ def json_sanitize_dict(dict):
     return sanitized
 
 
-def save_json(data, filename, indent=4, encoding="utf8"):
-    """ Saves given data in a json file (we love pretty, so prettified by default) """
+def save_json(data, filename, indent=None, encoding="utf8", ignore_nan=True):
+    """ Saves given data in a json file, encodes as utf-8, replace np.NaN with nulls """
     with open(filename, "w", encoding=encoding) as f:
-        json.dump(data, f, indent=indent)
+        json.dump(data, f, indent=indent, ignore_nan=ignore_nan)
 
 
 def read_json(filename, encoding="utf-8"):
@@ -188,6 +277,17 @@ def read_json(filename, encoding="utf-8"):
             return json.load(f)
     except Exception as exc:
         detail = "analitico.utilities.read_json: error while reading {}, exception: {}".format(filename, exc)
+        logger.error(detail)
+        raise Exception(detail, exc)
+
+
+def read_text(filename, encoding="utf-8"):
+    """ Reads a text file """
+    try:
+        with open(filename, encoding=encoding) as f:
+            return f.read()
+    except Exception as exc:
+        detail = "analitico.utilities.read_text: error while reading {}, exception: {}".format(filename, exc)
         logger.error(detail)
         raise Exception(detail, exc)
 
@@ -283,7 +383,7 @@ def set_dict_dot(d: dict, key: str, value=None):
             d[subkey] = value
             return
         if not (subkey in d):
-            d[subkey] = None
+            d[subkey] = OrderedDict()
         set_dict_dot(d[subkey], key[len(subkey) + 1 :], value)
 
 
@@ -296,3 +396,88 @@ def get_csv_row_count(filename):
     """ Returns the number of rows in the given csv file (one row is deducted for the header) """
     with open(filename, "r") as f:
         return sum(1 for row in f) - 1
+
+
+##
+## Regular expression
+##
+
+
+def re_match_group(expression: str, content: str, default: str = None, group_index: int = 1) -> str:
+    """ Searches for the first matching group or returns the default value """
+    match = re.search(expression, content)
+    if match:
+        return match.group(group_index)
+    return default
+
+
+##
+## Text
+##
+
+
+def comma_separated_to_array(items: str) -> [str]:
+    """ Turns a string with a comma separated list of items into an array of strings """
+    if items and items.strip():
+        return [x.strip() for x in items.split(",")]
+    return None
+
+
+def array_to_comma_separated(items: [str]) -> str:
+    """ Turns an array of items into a comma separated string """
+    if items and len(items) > 0:
+        return ",".join(items)
+    return None
+
+
+##
+## Subprocess
+##
+
+
+def json_from_string_if_possible(value: str):
+    """ If your string is json then it will be parsed and returned otherwise you just get your string back """
+    try:
+        return json.loads(value) if len(value) > 4 else value
+    except:
+        pass
+    return value
+
+
+def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None) -> (str, str):
+    """
+    Run a subprocess with the given command arguments. Logs the command, the response
+    and the time it took to run it. If an error occours, raises an explanatory exception
+    otherwise it returns the stdout and stderr from the command possibly parse as json
+    if the response was in json.
+    """
+    message = "subprocess_run:\n" + " ".join(cmd_args)
+    logger.info(message)
+    if job:
+        job.append_logs(message)
+
+    started_on = time_ms()
+    response = subprocess.run(
+        cmd_args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, cwd=cwd
+    )
+
+    elapsed_ms = time_ms(started_on)
+    message = (
+        f"completed in {elapsed_ms} ms, returned code: {response.returncode}\n\n{response.stdout}\n\n{response.stderr}"
+    )
+    logger.info(message)
+    if job:
+        job.append_logs(message)
+
+    if response.returncode:
+        message = "An error occoured while executing '" + " ".join(cmd_args) + "'."
+        if response.stdout:
+            message += "\nResponse.stdout:\n" + response.stdout
+        if response.stderr:
+            message += "\nResponse.stderr:\n" + response.stderr
+        logger.error(message)
+        raise AnaliticoException(message)
+
+    stdout = json_from_string_if_possible(response.stdout)
+    stderr = json_from_string_if_possible(response.stderr)
+    return stdout, stderr

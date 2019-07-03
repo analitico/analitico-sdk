@@ -3,6 +3,7 @@ import os.path
 import pandas as pd
 import random
 import string
+import pytest
 
 from analitico import AnaliticoException
 from analitico.factory import Factory
@@ -13,6 +14,7 @@ from .test_mixin import TestMixin
 # pylint: disable=no-member
 
 
+@pytest.mark.django_db
 class ExceptionTests(unittest.TestCase, TestMixin):
     """ Unit testing of AnaliticoException """
 

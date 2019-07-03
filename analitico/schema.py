@@ -95,7 +95,7 @@ def get_column_type(df, column):
 def generate_schema(df: pd.DataFrame) -> dict:
     """ Generates an analitico schema from a pandas dataframe """
     columns = []
-    
+
     columns_names = df.columns.tolist()
     for name in columns_names:
         ctype = pandas_to_analitico_type(df[name].dtype)
@@ -124,15 +124,18 @@ def apply_column(df: pd.DataFrame, column):
             elif column_type == "float":
                 if missing:
                     df[column_name] = np.nan
+                df[column_name].fillna(0)
                 df[column_name] = df[column_name].astype(float)
             elif column_type == "boolean":
                 if missing:
                     df[column_name] = False
-                df[column_name] = df[column_name].astype(bool)
+                # missing values are converted to False
+                df[column_name] = df[column_name].fillna(False).astype(bool)
             elif column_type == "integer":
                 if missing:
                     df[column_name] = 0
-                df[column_name] = df[column_name].astype(int)
+                # missing values converted to 0
+                df[column_name] = df[column_name].fillna(0).astype(int)
             elif column_type == "datetime":
                 if missing:
                     df[column_name] = None
@@ -157,7 +160,7 @@ def apply_column(df: pd.DataFrame, column):
             ) from exc
 
     if "rename" in column:
-        df.rename(index=str, columns={ column_name: column["rename"]}, inplace=True)
+        df.rename(index=str, columns={column_name: column["rename"]}, inplace=True)
         column_name = column["rename"]
 
     # make requested column index
@@ -169,6 +172,7 @@ def apply_column(df: pd.DataFrame, column):
 
     assert column_name in df.columns
     return df[column_name]
+
 
 def apply_schema(df: pd.DataFrame, schema):
     """ 
