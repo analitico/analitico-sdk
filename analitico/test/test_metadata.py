@@ -26,14 +26,14 @@ class MetadataTests(unittest.TestCase):
             os.remove(METADATA_FILENAME)
 
     def test_metadata_set_score(self):
-        set_score("number_of_lines", 100)
+        set_metric("number_of_lines", 100)
 
         metadata = get_metadata()
         self.assertEqual(len(metadata["scores"]), 1)
         self.assertEqual(metadata["scores"]["number_of_lines"], 100)
 
     def test_metadata_set_score_with_title(self):
-        set_score("number_of_lines2", 100, title="Number of lines", subtitle="A longer description")
+        set_metric("number_of_lines2", 100, title="Number of lines", subtitle="A longer description")
 
         metadata = get_metadata()
         self.assertEqual(len(metadata["scores"]), 1)
@@ -42,7 +42,7 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["number_of_lines2"]["subtitle"], "A longer description")
 
     def test_metadata_set_score_with_title_and_priority(self):
-        set_score("number_of_lines3", 100, title="Number of lines", priority=1)
+        set_metric("number_of_lines3", 100, title="Number of lines", priority=1)
 
         metadata = get_metadata()
         self.assertEqual(len(metadata["scores"]), 1)
@@ -52,16 +52,16 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["number_of_lines3"]["priority"], 1)
 
     def test_metadata_set_multiple_scores(self):
-        set_score("metric1", 100)
-        set_score("metric2", "hello")
+        set_metric("metric1", 100)
+        set_metric("metric2", "hello")
 
         metadata = get_metadata()
         self.assertEqual(metadata["scores"]["metric1"], 100)
         self.assertEqual(metadata["scores"]["metric2"], "hello")
 
     def test_metadata_set_category_scores_with_category(self):
-        set_score("metric1", 100)
-        set_score("metric2", "hello", category="category2")
+        set_metric("metric1", 100)
+        set_metric("metric2", "hello", category="category2")
 
         metadata = get_metadata()
         self.assertEqual(len(metadata["scores"]), 2)
@@ -69,8 +69,8 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["category2"]["metric2"], "hello")
 
     def test_metadata_set_category_scores_with_category_title(self):
-        set_score("metric1", 100)
-        set_score("metric2", "hello", category="category2", category_title="Category Two")
+        set_metric("metric1", 100)
+        set_metric("metric2", "hello", category="category2", category_title="Category Two")
 
         metadata = get_metadata()
         self.assertEqual(len(metadata["scores"]), 2)
@@ -79,8 +79,8 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["category2"]["metric2"], "hello")
 
     def test_metadata_set_category_scores_with_category_title_and_scores_extras(self):
-        set_score("metric1", 100)
-        set_score(
+        set_metric("metric1", 100)
+        set_metric(
             "metric2",
             "hello",
             priority=1,
@@ -112,8 +112,13 @@ class MetadataTests(unittest.TestCase):
         y_pred = lm.predict(X)
 
         # save a variety of scores derived from model, data and predictions
-        set_model_scores(model, y_true, y_pred)
+        set_model_metrics(model, y_true, y_pred)
 
+        # check regressor scores were saved correctly 
         scores = get_metadata()["scores"]["sklearn_metrics"]
         self.assertIn("mean_abs_error", scores)
         self.assertAlmostEqual(scores["mean_abs_error"]["value"], 3.27086, 2)
+        self.assertIn("mean_squared_error", scores)
+        self.assertAlmostEqual(scores["mean_squared_error"]["value"], 21.89483, 2)
+        self.assertIn("median_abs_error", scores)
+        self.assertAlmostEqual(scores["median_abs_error"]["value"], 2.45231, 2)

@@ -16,7 +16,7 @@ import analitico.status
 import analitico.logging
 
 # import utility methods to main namespace
-from analitico.metadata import set_score
+from analitico.metadata import set_metric, set_model_metrics
 
 
 def authorize(token=None, endpoint=ANALITICO_API_ENDPOINT) -> analitico.factory.Factory:
