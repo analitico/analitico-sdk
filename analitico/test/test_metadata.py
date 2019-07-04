@@ -100,7 +100,7 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(metadata["scores"]["category2"]["metric2"]["priority"], 1)
         self.assertEqual(metadata["scores"]["category2"]["metric2"]["title"], "VIP Metric")
 
-    def test_metadata_scores_scikit_boston(self):
+    def test_metadata_scores_scikit_regressor(self):
         data = sklearn.datasets.load_boston()
         df = pandas.DataFrame(data.data, columns=data.feature_names)
         target = pandas.DataFrame(data.target, columns=["MEDV"])
@@ -112,9 +112,9 @@ class MetadataTests(unittest.TestCase):
         y_pred = lm.predict(X)
 
         # save a variety of scores derived from model, data and predictions
-        set_model_metrics(model, y_true, y_pred)
+        set_model_metrics(y_true, y_pred, model=model)
 
-        # check regressor scores were saved correctly 
+        # check regressor scores were saved correctly
         scores = get_metadata()["scores"]["sklearn_metrics"]
         self.assertIn("mean_abs_error", scores)
         self.assertAlmostEqual(scores["mean_abs_error"]["value"], 3.27086, 2)
@@ -122,3 +122,32 @@ class MetadataTests(unittest.TestCase):
         self.assertAlmostEqual(scores["mean_squared_error"]["value"], 21.89483, 2)
         self.assertIn("median_abs_error", scores)
         self.assertAlmostEqual(scores["median_abs_error"]["value"], 2.45231, 2)
+
+    def test_metadata_scores_scikit_classificator(self):
+        """ Test extracting metrics metadata from a scikit learn classificator. """
+        iris = sklearn.datasets.load_iris()
+        classificator = sklearn.svm.SVC(gamma="scale")
+
+        X, y_true = iris.data, iris.target
+        model = classificator.fit(X, y_true)
+        y_pred = model.predict(X)
+
+        # save a variety of scores derived from model, data and predictions
+        set_model_metrics(y_true, y_pred, target_names=iris.target_names, model=model)
+
+        # check regressor scores were saved correctly
+        scores = get_metadata()["scores"]["sklearn_metrics"]
+
+        self.assertIn("classification_report", scores)
+        for target_name in iris.target_names:
+            self.assertIn(target_name, scores["classification_report"]["value"])
+
+        self.assertIn("confusion_matrix", scores)
+
+        self.assertAlmostEqual(scores["accuracy_score"]["value"], 0.98667, 2)
+        self.assertAlmostEqual(scores["precision_score_macro"]["value"], 0.98718, 2)
+        self.assertAlmostEqual(scores["precision_score_micro"]["value"], 0.98667, 2)
+        self.assertAlmostEqual(scores["precision_score_weighted"]["value"], 0.98718, 2)
+
+        # not a binary classifier, some metrics should not be there
+        self.assertNotIn("log_loss", scores)
