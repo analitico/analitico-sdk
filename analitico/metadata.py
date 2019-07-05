@@ -1,4 +1,3 @@
-
 import os
 import json
 import logging
@@ -25,11 +24,9 @@ def set_metric(
     title: str = None,
     subtitle: str = None,
     priority: int = None,
-
     category: str = None,
     category_title: str = None,
     category_subtitle: str = None,
-
     metadata_filename=METADATA_FILENAME,
 ):
     """
@@ -79,16 +76,13 @@ def set_metric(
 def set_model_metrics(
     y_true,
     y_pred,
-
     model: object = None,
     is_regressor: bool = None,
     is_classifier: bool = None,
     target_names=None,
-
     category: str = None,
     category_title: str = None,
     category_subtitle: str = None,
-
     metadata_filename: str = METADATA_FILENAME,
 ):
     """
