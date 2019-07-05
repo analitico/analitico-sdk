@@ -24,6 +24,7 @@ TOKEN_TYPE = "token"
 USER_TYPE = "user"
 WORKSPACE_TYPE = "workspace"
 ROLE_TYPE = "role"
+DRIVE_TYPE = "drive"
 
 # types/others
 PLUGIN_TYPE = "plugin"
@@ -41,6 +42,7 @@ TOKEN_PREFIX = "tok_"  # authorization token
 USER_PREFIX = "id_"  # an identity profile
 WORKSPACE_PREFIX = "ws_"  # workspace with rights and one or more projects and other resources
 ROLE_PREFIX = "ro_"  # access management rights via roles and permissions
+DRIVE_PREFIX = "dr_"  # storage drive, mount, bucket, etc...
 
 PLUGIN_PREFIX = "pl_"  # plugin instance (not plugin description or metadata)
 WORKER_PREFIX = "wk_"  # worker process
