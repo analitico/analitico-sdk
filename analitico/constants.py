@@ -12,6 +12,10 @@ ACTION_TRAIN = "train"  # train a recipe to procude a model
 ACTION_PREDICT = "predict"  # run a model to generate a prediction
 ACTION_DEPLOY = "deploy"  # deploy a model to a serverless endpoint
 
+ACTION_RUN = "run"  # run a recipe, notebook or dataset notebooks
+ACTION_BUILD = "build"  # build a snapshot of a recipe into a docker
+ACTION_RUN_AND_BUILD = "run-and-build" # run the recipe then build its docker/model as one job with two steps
+
 # types/models
 TYPE_PREFIX = "analitico/"
 DATASET_TYPE = "dataset"
