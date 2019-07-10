@@ -122,7 +122,7 @@ def exception_to_dict(exception: Exception, add_context=True, add_formatted=True
 ##
 
 
-def id_generator(size=9, chars=string.ascii_letters + string.digits):
+def id_generator(size=8, chars="abcdefghijklmnopqrstuvwxyz0123456789"):
     return "".join(random.choice(chars) for _ in range(size))
 
 
