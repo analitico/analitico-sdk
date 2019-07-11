@@ -15,6 +15,7 @@ import dateutil
 import re
 import subprocess
 import traceback
+import shutil
 
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -122,6 +123,55 @@ def exception_to_dict(exception: Exception, add_context=True, add_formatted=True
 
 
 ##
+## Files
+##
+
+
+def copytree(src: str, dst: str, symlinks: bool = False, ignore=None):
+    """
+    Copy source directory into destination directory.
+    Works like shutil.copytree but does not require that target directory does not exist.
+    If a file already exists at the destination it will be overwritten.
+    
+    Arguments:
+        src {str} -- The source directory
+        dst {str} -- The destination directory
+    """
+    if not os.path.exists(dst):
+        shutil.copytree(src, dst, symlinks, ignore)
+    else:
+        # destination must be a directory
+        assert os.path.isdir(dst)
+
+        names = os.listdir(src)
+        errors = []
+        for name in names:
+            srcname = os.path.join(src, name)
+            dstname = os.path.join(dst, name)
+            try:
+                if symlinks and os.path.islink(srcname):
+                    linkto = os.readlink(srcname)
+                    os.symlink(linkto, dstname)
+                elif os.path.isdir(srcname):
+                    copytree(srcname, dstname, symlinks)
+                else:
+                    shutil.copy2(srcname, dstname)
+                # XXX What about devices, sockets etc.?
+            # catch the Error from the recursive copytree so that we can
+            # continue with other files
+            except shutil.Error as err:
+                errors.extend(err.args[0])
+            except OSError as why:
+                errors.append((srcname, dstname, str(why)))
+        try:
+            shutil.copystat(src, dst)
+        except OSError as why:
+            errors.extend((src, dst, str(why)))
+        if errors:
+            raise shutil.Error(errors)
+
+
+##
 ## Crypto
 ##
 
@@ -132,19 +182,12 @@ def id_generator(size=8, chars="abcdefghijklmnopqrstuvwxyz0123456789"):
 
 def ssh_key_generator():
     """ Generate ssh private and public key """
-    key = rsa.generate_private_key(
-        backend=crypto_default_backend(),
-        public_exponent=65537,
-        key_size=2048
-    )
+    key = rsa.generate_private_key(backend=crypto_default_backend(), public_exponent=65537, key_size=2048)
     private_key = key.private_bytes(
-        crypto_serialization.Encoding.PEM,
-        crypto_serialization.PrivateFormat.PKCS8,
-        crypto_serialization.NoEncryption()
+        crypto_serialization.Encoding.PEM, crypto_serialization.PrivateFormat.PKCS8, crypto_serialization.NoEncryption()
     )
     public_key = key.public_key().public_bytes(
-        crypto_serialization.Encoding.OpenSSH,
-        crypto_serialization.PublicFormat.OpenSSH
+        crypto_serialization.Encoding.OpenSSH, crypto_serialization.PublicFormat.OpenSSH
     )
     return (private_key, public_key)
 
