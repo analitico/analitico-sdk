@@ -127,48 +127,19 @@ def exception_to_dict(exception: Exception, add_context=True, add_formatted=True
 ##
 
 
-def copytree(src: str, dst: str, symlinks: bool = False, ignore=None):
+def copy_directory(src_directory, dst_directory):
     """
-    Copy source directory into destination directory.
+    Copy source directory recursively into destination directory.
     Works like shutil.copytree but does not require that target directory does not exist.
     If a file already exists at the destination it will be overwritten.
     
     Arguments:
-        src {str} -- The source directory
-        dst {str} -- The destination directory
+        src_directory {str} -- The source directory.
+        dst_directory {str} -- The destination directory.
     """
-    if not os.path.exists(dst):
-        shutil.copytree(src, dst, symlinks, ignore)
-    else:
-        # destination must be a directory
-        assert os.path.isdir(dst)
-
-        names = os.listdir(src)
-        errors = []
-        for name in names:
-            srcname = os.path.join(src, name)
-            dstname = os.path.join(dst, name)
-            try:
-                if symlinks and os.path.islink(srcname):
-                    linkto = os.readlink(srcname)
-                    os.symlink(linkto, dstname)
-                elif os.path.isdir(srcname):
-                    copytree(srcname, dstname, symlinks)
-                else:
-                    shutil.copy2(srcname, dstname)
-                # XXX What about devices, sockets etc.?
-            # catch the Error from the recursive copytree so that we can
-            # continue with other files
-            except shutil.Error as err:
-                errors.extend(err.args[0])
-            except OSError as why:
-                errors.append((srcname, dstname, str(why)))
-        try:
-            shutil.copystat(src, dst)
-        except OSError as why:
-            errors.extend((src, dst, str(why)))
-        if errors:
-            raise shutil.Error(errors)
+    if not src_directory.endswith("/"): src_directory += "/"
+    if not dst_directory.endswith("/"): dst_directory += "/"
+    subprocess_run(cmd_args=["cp", "-rf", src_directory, dst_directory])
 
 
 ##
