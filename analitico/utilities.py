@@ -132,6 +132,7 @@ def copy_directory(src_directory, dst_directory):
     Copy source directory recursively into destination directory.
     Works like shutil.copytree but does not require that target directory does not exist.
     If a file already exists at the destination it will be overwritten.
+    Symbolic links in the source directory are followed.
     
     Arguments:
         src_directory {str} -- The source directory.
@@ -139,7 +140,9 @@ def copy_directory(src_directory, dst_directory):
     """
     if not src_directory.endswith("/"): src_directory += "/"
     if not dst_directory.endswith("/"): dst_directory += "/"
-    subprocess_run(cmd_args=["cp", "-rf", src_directory, dst_directory])
+    if not os.path.exists(dst_directory): os.makedirs(dst_directory)
+    # wthout shell=True the star char is parsed by subprocess
+    subprocess_run(cmd_args=[f"cp -rfH {src_directory}* {dst_directory}"], shell=True)
 
 
 ##
@@ -481,7 +484,7 @@ def json_from_string_if_possible(value: str):
     return value
 
 
-def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None) -> (str, str):
+def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (str, str):
     """
     Run a subprocess with the given command arguments. Logs the command, the response
     and the time it took to run it. If an error occours, raises an explanatory exception
@@ -495,7 +498,7 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None) -> (str, str):
 
     started_on = time_ms()
     response = subprocess.run(
-        cmd_args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, cwd=cwd
+        cmd_args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, cwd=cwd, shell=shell
     )
 
     elapsed_ms = time_ms(started_on)
