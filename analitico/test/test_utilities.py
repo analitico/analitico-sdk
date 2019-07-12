@@ -1,8 +1,9 @@
 import unittest
 import tempfile
 import numpy as np
+import os
 
-from analitico.utilities import get_dict_dot, save_json, read_json, read_text, save_text
+from analitico.utilities import get_dict_dot, save_json, read_json, read_text, save_text, copy_directory
 
 TST_DICT = {
     "parent_1": {
@@ -61,3 +62,42 @@ class UtilitiesTests(unittest.TestCase):
 
             values2 = read_json(f.name)
             self.assertEqual(values2["nanKey"], None)
+
+    def test_copy_directory(self):
+        source = tempfile.TemporaryDirectory()
+        destination = tempfile.TemporaryDirectory()
+        symlinked_dir = tempfile.TemporaryDirectory()
+        symlinked_dir_basename = os.path.basename(symlinked_dir.name)
+
+        f1 = "f1.txt"
+        save_text("micky", os.path.join(source.name, f1))
+        f2 = "f2.txt"
+        save_text("mouse", os.path.join(source.name, f2))
+        # duplicate f2 into the destination folder
+        save_text("batman", os.path.join(destination.name, f2))
+        f3 = "f3.txt"
+        save_text("superman",  os.path.join(symlinked_dir.name, f3))
+        # create the symlink to the folder
+        os.symlink(symlinked_dir.name, os.path.join(source.name, symlinked_dir_basename))
+
+        copy_directory(source.name, destination.name)
+        
+        # all files are copied
+        self.assertTrue(os.path.exists(os.path.join(destination.name, f1)))
+        self.assertTrue(os.path.exists(os.path.join(destination.name, f2)))
+        self.assertTrue(os.path.exists(os.path.join(destination.name, symlinked_dir_basename, f3)))
+
+        # existing f2 file is ovewritten
+        self.assertEqual("mouse", read_text(os.path.join(destination.name, f2)))
+
+        # symbolic link is followed
+        copied_symlinked_folder = os.path.join(destination.name, symlinked_dir_basename)
+        self.assertFalse(os.path.islink(copied_symlinked_folder))
+        self.assertTrue(os.path.exists(os.path.join(copied_symlinked_folder, f3)))
+
+        # missing destination directory is created
+        with tempfile.TemporaryDirectory() as temp:
+            destination_missing = os.path.join(temp, "subfolder")
+            copy_directory(source.name, destination_missing)
+            self.assertTrue(os.path.exists(destination_missing))
+
