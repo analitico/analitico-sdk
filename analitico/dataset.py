@@ -3,7 +3,7 @@ import pandas as pd
 import analitico.mixin
 
 ##
-## Dataset
+## DEPRECATED. VERSION USED BY SDK IS IN MODELS/DATASET
 ##
 
 

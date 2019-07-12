@@ -6,3 +6,4 @@ from .test_factory import FactoryTests
 from .test_mixin import TestMixin
 from .test_plugin import PluginTests
 from .test_metadata import MetadataTests
+from .test_sdk import SDKTests
