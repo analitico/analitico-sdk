@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="analitico",
-    version="0.0.0.dev13",
+    version="2019.07.14.dev",
     author="Analitico Labs Inc.",
     author_email="info@analitico.ai",
     description="A Python package for Analitico.ai",
