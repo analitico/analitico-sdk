@@ -18,10 +18,10 @@ import analitico
 import pandas as pd
 
 # authorize calls with developer token
-api = analitico.authorize("tok_xxx")
+sdk = analitico.authorize_sdk(token="tok_xxx")
 
 # download a dataset from analitico
-dataset = api.get_dataset("ds_xxx")
+dataset = sdk.get_dataset("ds_xxx")
 
 # convert dataset to a typed pandas dataframe
 df = dataset.get_dataframe()
