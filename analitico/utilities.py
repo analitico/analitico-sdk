@@ -491,7 +491,8 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
     otherwise it returns the stdout and stderr from the command possibly parse as json
     if the response was in json.
     """
-    message = "subprocess_run:\n" + " ".join(cmd_args)
+    command = cmd_args if not isinstance(cmd_args, list) else " ".join(cmd_args)
+    message = "subprocess_run:\n" + command
     logger.info(message)
     if job:
         job.append_logs(message)
@@ -510,7 +511,7 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
         job.append_logs(message)
 
     if response.returncode:
-        message = "An error occoured while executing '" + " ".join(cmd_args) + "'."
+        message = f"An error occoured while executing '{command}'."
         if response.stdout:
             message += "\nResponse.stdout:\n" + response.stdout
         if response.stderr:
