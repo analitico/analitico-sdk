@@ -491,7 +491,7 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
     otherwise it returns the stdout and stderr from the command possibly parse as json
     if the response was in json.
     """
-    command = cmd_args if not isinstance(cmd_args, list) else " ".join(cmd_args)
+    command = cmd_args if isinstance(cmd_args, str) else " ".join(cmd_args)
     message = "subprocess_run:\n" + command
     logger.info(message)
     if job:
