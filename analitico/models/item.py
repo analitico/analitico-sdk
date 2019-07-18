@@ -107,7 +107,7 @@ class Item(AttributeMixin):
                 with open(filepath, "rb") as f:
                     remote_url += str(remotepath)
                     response = requests.put(remote_url, data=f, auth=(username, password))
-                    assert response.status_code == 200 or response.status_code == 201
+                    assert response.status_code == 200 or response.status_code == 201 or response.status_code == 204
                     return True
 
             if False:
