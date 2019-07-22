@@ -134,14 +134,15 @@ class SDKTests(unittest.TestCase, TestMixin):
             if dataset:
                 dataset.delete()
 
-
     def test_upload_ilpes(self):
-        sdk = analitico.authorize_sdk(endpoint="https://staging.analitico.ai/api/", token="tok_pbn6gxbj", workspace_id="ws_2q2fq3wg")
+        sdk = analitico.authorize_sdk(
+            endpoint="https://staging.analitico.ai/api/", token="tok_pbn6gxbj", workspace_id="ws_2q2fq3wg"
+        )
 
         dataset = sdk.get_dataset("ds_aqp195k4")
 
         from sklearn.datasets import load_boston
+
         boston_dataset = load_boston()
         boston_df = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
         dataset.upload("boston.parquet", df=boston_df)
-

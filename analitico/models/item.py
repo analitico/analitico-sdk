@@ -112,7 +112,7 @@ class Item(AttributeMixin):
 
             if False:
                 rsync_path = f"{username}@{username}.your-storagebox.de"
-#                rsync_path = f"{rsync_path}:./{self.sdk.get_item_type(self.id)}s/{self.id}/{remotepath}"
+                #                rsync_path = f"{rsync_path}:./{self.sdk.get_item_type(self.id)}s/{self.id}/{remotepath}"
                 rsync_path = f"{rsync_path}:./pippo_{remotepath}"
 
                 with tempfile.NamedTemporaryFile(suffix=".id_rsa") as key:
@@ -129,7 +129,7 @@ class Item(AttributeMixin):
                         "rsync",
                         "--recursive",
                         "--progress",
-                        "-L", # follow symlinks
+                        "-L",  # follow symlinks
                         "-e",
                         f"'ssh -p23 -o StrictHostKeyChecking=no -i {key.name}'",
                         filepath,

@@ -138,9 +138,12 @@ def copy_directory(src_directory, dst_directory):
         src_directory {str} -- The source directory.
         dst_directory {str} -- The destination directory.
     """
-    if not src_directory.endswith("/"): src_directory += "/"
-    if not dst_directory.endswith("/"): dst_directory += "/"
-    if not os.path.exists(dst_directory): os.makedirs(dst_directory)
+    if not src_directory.endswith("/"):
+        src_directory += "/"
+    if not dst_directory.endswith("/"):
+        dst_directory += "/"
+    if not os.path.exists(dst_directory):
+        os.makedirs(dst_directory)
     # wthout shell=True the star char is parsed by subprocess
     subprocess_run(cmd_args=[f"cp -rfH {src_directory}* {dst_directory}"], shell=True)
 
@@ -499,7 +502,13 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
 
     started_on = time_ms()
     response = subprocess.run(
-        cmd_args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, cwd=cwd, shell=shell
+        cmd_args,
+        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout,
+        cwd=cwd,
+        shell=shell,
     )
 
     elapsed_ms = time_ms(started_on)
