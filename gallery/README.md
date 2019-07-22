@@ -1,1 +1,0 @@
-# analitico-gallery
