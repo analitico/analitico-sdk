@@ -76,12 +76,12 @@ class UtilitiesTests(unittest.TestCase):
         # duplicate f2 into the destination folder
         save_text("batman", os.path.join(destination.name, f2))
         f3 = "f3.txt"
-        save_text("superman",  os.path.join(symlinked_dir.name, f3))
+        save_text("superman", os.path.join(symlinked_dir.name, f3))
         # create the symlink to the folder
         os.symlink(symlinked_dir.name, os.path.join(source.name, symlinked_dir_basename))
 
         copy_directory(source.name, destination.name)
-        
+
         # all files are copied
         self.assertTrue(os.path.exists(os.path.join(destination.name, f1)))
         self.assertTrue(os.path.exists(os.path.join(destination.name, f2)))
@@ -100,4 +100,3 @@ class UtilitiesTests(unittest.TestCase):
             destination_missing = os.path.join(temp, "subfolder")
             copy_directory(source.name, destination_missing)
             self.assertTrue(os.path.exists(destination_missing))
-
