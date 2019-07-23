@@ -22,6 +22,7 @@ assert dst_avatars.is_dir()
 for src_markdown in src_tutorials.glob("*/*/*.markdown"):
     src_parent = src_markdown.parent
     item_id = src_parent.parts[-1]
+    item_type = src_parent.parts[-2][:-1]
     print(f"\n{src_parent.parts[-2]}/{src_parent.parts[-1]}")
 
     # parse and validate yaml header in markdown file
@@ -33,6 +34,7 @@ for src_markdown in src_tutorials.glob("*/*/*.markdown"):
         idx_1 = item_markdown.find("---\n", idx_0+1)
         item_yaml = yaml.load(item_markdown[idx_0 + 4: idx_1], Loader=yaml.Loader)
         item_yaml["id"] = item_id
+        item_yaml["type"] = item_type
 
         # title and description are mandatory
         assert "title" in item_yaml, "title is missing"
