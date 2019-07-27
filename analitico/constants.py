@@ -50,3 +50,9 @@ DRIVE_PREFIX = "dr_"  # storage drive, mount, bucket, etc...
 
 PLUGIN_PREFIX = "pl_"  # plugin instance (not plugin description or metadata)
 WORKER_PREFIX = "wk_"  # worker process
+
+# files suffixes
+PARQUET_SUFFIXES = (".parquet",)  # Apache Parquet
+CSV_SUFFIXES = (".csv",)  # Comma Separated Values
+EXCEL_SUFFIXES = (".xls", ".xlsx")  # Microsoft Excel
+HDF_SUFFIXES = (".hdf", ".h4", ".hdf4", ".he2", ".h5", ".hdf5", ".he5")  # Hierarchical Data Format

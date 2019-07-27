@@ -158,7 +158,7 @@ def pd_columns_to_string(df):
     return columns[:-2]
 
 
-def pd_read_csv(filepath_or_buffer, schema=None):
+def pd_read_csv(filepath_or_buffer, schema=None, skiprows=None, nrows=None):
     """ Read csv file from file or stream and apply optional schema """
     try:
         dtype = None
@@ -180,7 +180,15 @@ def pd_read_csv(filepath_or_buffer, schema=None):
                             dtype[column["name"]] = analitico_to_pandas_type(column["type"])
 
         # read csv from file or stream
-        df = pd.read_csv(filepath_or_buffer, dtype=dtype, encoding="utf-8", na_values=NA_VALUES, low_memory=False)
+        df = pd.read_csv(
+            filepath_or_buffer,
+            dtype=dtype,
+            encoding="utf-8",
+            na_values=NA_VALUES,
+            low_memory=False,
+            skiprows=skiprows,
+            nrows=nrows,
+        )
 
         if schema:
             # reorder, filter, apply types, rename columns as requested in schema
