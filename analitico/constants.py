@@ -54,8 +54,8 @@ WORKER_PREFIX = "wk_"  # worker process
 # files suffixes
 PARQUET_SUFFIXES = (".parquet",)  # Apache Parquet
 CSV_SUFFIXES = (".csv",)  # Comma Separated Values
-EXCEL_SUFFIXES = (".xls", ".xlsx")  # Microsoft Excel
-HDF_SUFFIXES = (".hdf", ".h4", ".hdf4", ".he2", ".h5", ".hdf5", ".he5")  # Hierarchical Data Format
+EXCEL_SUFFIXES = (".xlsx", ".xls")  # Microsoft Excel
+HDF_SUFFIXES = (".h5", ".hdf5", ".he5", ".hdf", ".h4", ".hdf4", ".he2")  # Hierarchical Data Format
 
 # suffixes for files that we can load in pandas dataframes
 PANDAS_SUFFIXES = PARQUET_SUFFIXES + CSV_SUFFIXES + EXCEL_SUFFIXES + HDF_SUFFIXES
