@@ -3,6 +3,8 @@
 import numpy as np
 import pandas as pd
 
+from analitico import AnaliticoException
+
 ##
 ## Schema
 ##
@@ -108,70 +110,76 @@ def generate_schema(df: pd.DataFrame) -> dict:
 
 def apply_column(df: pd.DataFrame, column):
     """ Apply given type to the column (parameters are type, name, etc from schema column) """
-    assert isinstance(df, pd.DataFrame)
-    assert "name" in column, "apply_column - should always be passed a column name"
-    column_name = column["name"]
+    try:
+        assert isinstance(df, pd.DataFrame)
+        assert "name" in column, "apply_column - should always be passed a column name"
+        column_name = column["name"]
 
-    # we are being requested to apply type to the column
-    if "type" in column:
-        try:
-            column_type = column["type"]
-            missing = column_name not in df.columns
-            if column_type == "string":
-                if missing:
-                    df[column_name] = None
-                df[column_name] = df[column_name].astype(str)
-            elif column_type == "float":
-                if missing:
-                    df[column_name] = np.nan
-                df[column_name].fillna(0)
-                df[column_name] = df[column_name].astype(float)
-            elif column_type == "boolean":
-                if missing:
-                    df[column_name] = False
-                # missing values are converted to False
-                df[column_name] = df[column_name].fillna(False).astype(bool)
-            elif column_type == "integer":
-                if missing:
-                    df[column_name] = 0
-                # missing values converted to 0
-                df[column_name] = df[column_name].fillna(0).astype(int)
-            elif column_type == "datetime":
-                if missing:
-                    df[column_name] = None
+        # we are being requested to apply type to the column
+        if "type" in column:
+            try:
+                column_type = column["type"]
+                missing = column_name not in df.columns
+                if column_type == "string":
+                    if missing:
+                        df[column_name] = None
+                    df[column_name] = df[column_name].astype(str)
+                elif column_type == "float":
+                    if missing:
+                        df[column_name] = np.nan
+                    df[column_name].fillna(0)
+                    df[column_name] = df[column_name].astype(float)
+                elif column_type == "boolean":
+                    if missing:
+                        df[column_name] = False
+                    # missing values are converted to False
+                    df[column_name] = df[column_name].fillna(False).astype(bool)
+                elif column_type == "integer":
+                    if missing:
+                        df[column_name] = 0
+                    # missing values converted to 0
+                    df[column_name] = df[column_name].fillna(0).astype(int)
+                elif column_type == "datetime":
+                    if missing:
+                        df[column_name] = None
+                    else:
+                        # strings like no
+                        for not_a_date in NA_DATES:
+                            df[column_name].replace(not_a_date, np.nan, inplace=True)
+                    df[column_name] = df[column_name].astype("datetime64[ns]")
+                elif column_type == "timespan":
+                    if missing:
+                        df[column_name] = None
+                    df[column_name] = pd.to_timedelta(df[column_name])
+                elif column_type == "category":
+                    if missing:
+                        df[column_name] = None
+                    df[column_name] = df[column_name].astype("category")
                 else:
-                    # strings like no
-                    for not_a_date in NA_DATES:
-                        df[column_name].replace(not_a_date, np.nan, inplace=True)
-                df[column_name] = df[column_name].astype("datetime64[ns]")
-            elif column_type == "timespan":
-                if missing:
-                    df[column_name] = None
-                df[column_name] = pd.to_timedelta(df[column_name])
-            elif column_type == "category":
-                if missing:
-                    df[column_name] = None
-                df[column_name] = df[column_name].astype("category")
-            else:
-                raise Exception("apply_column - unknown type: " + column_type)
-        except Exception as exc:
-            raise Exception(
-                "apply_column - exception while applying type '" + column_type + "' to column '" + column_name + "'"
-            ) from exc
+                    raise Exception("apply_column - unknown type: " + column_type)
+            except Exception as exc:
+                msg = f"apply_column - exception while applying type {column_type} to column {column_name}"
+                raise AnaliticoException(msg)
 
-    if "rename" in column:
-        df.rename(index=str, columns={column_name: column["rename"]}, inplace=True)
-        column_name = column["rename"]
+        if "rename" in column:
+            df.rename(index=str, columns={column_name: column["rename"]}, inplace=True)
+            column_name = column["rename"]
 
-    # make requested column index
-    index = column.get("index", False)
-    if index:
-        # we use this column as the index but do not remove it from
-        # the columns otherwise we won't be able to rename it, etc
-        df.set_index(column_name, drop=False, inplace=True)
+        # make requested column index
+        index = column.get("index", False)
+        if index:
+            # we use this column as the index but do not remove it from
+            # the columns otherwise we won't be able to rename it, etc
+            df.set_index(column_name, drop=False, inplace=True)
 
-    assert column_name in df.columns
-    return df[column_name]
+        assert column_name in df.columns
+        return df[column_name]
+
+    except AnaliticoException as exc:
+        raise
+
+    except Exception as exc:
+        raise AnaliticoException(f"apply_column - could apply {column}") from exc
 
 
 def apply_schema(df: pd.DataFrame, schema):
