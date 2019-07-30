@@ -9,6 +9,7 @@ tags:
 - pytorch
 - classification
 position: 2
+home: true
 ---
 
 

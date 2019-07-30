@@ -9,6 +9,7 @@ tags:
 - mxnet
 - classification
 position: 4
+home: true
 ---
 
 

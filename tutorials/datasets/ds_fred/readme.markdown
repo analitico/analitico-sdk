@@ -5,6 +5,7 @@ date: 2019-07-21 10:10:00
 tags:
 - tutorial
 - parquet
+position: 100
 ---
 
 ## Getting Setup

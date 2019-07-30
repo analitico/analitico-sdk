@@ -9,6 +9,7 @@ tags:
 - tensorflow
 - classification
 position: 3
+home: true
 ---
 
 
