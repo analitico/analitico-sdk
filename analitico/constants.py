@@ -59,3 +59,7 @@ HDF_SUFFIXES = (".h5", ".hdf5", ".he5", ".hdf", ".h4", ".hdf4", ".he2")  # Hiera
 
 # suffixes for files that we can load in pandas dataframes
 PANDAS_SUFFIXES = PARQUET_SUFFIXES + CSV_SUFFIXES + EXCEL_SUFFIXES + HDF_SUFFIXES
+
+# APIs query parameters
+QUERY_PARAM = "query"  # query parameter used to search and filter records, etc
+ORDER_PARAM = "order"  # query parameter used to sort records, eg: ?order=firstname,lastname,-age
