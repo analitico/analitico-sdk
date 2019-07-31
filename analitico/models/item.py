@@ -5,7 +5,7 @@ import urllib
 import requests
 import base64
 
-from analitico import AnaliticoException
+from analitico import AnaliticoException, logger
 from analitico.mixin import AttributeMixin
 from analitico.utilities import save_text, subprocess_run
 
@@ -70,11 +70,15 @@ class Item(AttributeMixin):
 
             # encode dataframe to disk temporarily
             with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=format) as f:
-                if format == ".parquet":
-                    df.to_parquet(f.name)
-                elif format == ".csv":
-                    df.to_csv(f.name)
-                # upload single file, don't use the name of temp file
+                try:
+                    if format == ".parquet":
+                        df.to_parquet(f.name)
+                    elif format == ".csv":
+                        df.to_csv(f.name)
+                except Exception as exc:
+                    logger.error(f"upload - cannot write dataset to {f.name} because: {exc}")
+                    raise exc
+
                 return self.upload(filepath=f.name, remotepath=filepath)
 
         # need to specify a file, directory or Path that should be uploaded to this item's storage
@@ -106,8 +110,16 @@ class Item(AttributeMixin):
 
                 with open(filepath, "rb") as f:
                     remote_url += str(remotepath)
-                    response = requests.put(remote_url, data=f, auth=(username, password))
-                    assert response.status_code == 200 or response.status_code == 201 or response.status_code == 204
+                    try:
+                        response = requests.put(remote_url, data=f, auth=(username, password))
+                    except Exception as exc:
+                        logger.error(f"upload - cannot upload to {remote_url} because: {exc}")
+                        raise exc
+                    if response.status_code not in (200, 201, 204):
+                        msg = f"Uploaded to {remote_url} and expected a status 200, 201 or 204 but received: {response.status_code}"
+                        logger.error(msg)
+                        raise AnaliticoException(msg, status_code=response.status_code)
+
                     return True
 
             if False:
