@@ -346,11 +346,11 @@ def timeit(method):
         # if self has logger, log to it
         if hasattr(args[0], "logger"):
             try:
-                args[0].logger.info("%s in %d ms", method.__name__.lower(), ms)
+                args[0].logger.info(f"{method.__name__.lower()} in {ms} ms")
             except:
                 pass
         else:
-            print("%s in %d ms", method.__name__.lower(), ms)
+            logger.info(f"\n{method.__name__.lower()} in {ms} ms")
 
         return result
 
