@@ -20,8 +20,8 @@ setuptools.setup(
     install_requires=[
         "catboost==0.11.1", 
         "numpy>=1.14.6", 
-        "pandas>=0.22.0"
-        "simplejson"
+        "pandas>=0.22.0",
+        "simplejson==3.16.0"
         ],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
