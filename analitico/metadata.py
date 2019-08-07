@@ -10,7 +10,7 @@ from analitico import logger
 from analitico.utilities import read_json, save_json, get_dict_dot, set_dict_dot
 
 # model metadata is saved in training.json
-METADATA_FILENAME = "training.json"
+METADATA_FILENAME = "metrics.json"
 
 
 def get_metadata(metadata_filename=METADATA_FILENAME):
