@@ -189,9 +189,15 @@ class SDKTests(unittest.TestCase, TestMixin):
 
             from sklearn.datasets import load_boston
 
+            # upload boston dataframe to service
             boston_dataset = load_boston()
-            boston_df = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
-            dataset.upload(df=boston_df)
+            boston_df1 = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
+            dataset.upload(df=boston_df1, remotepath="boston.parquet")
+
+            # download boston dataframe from service
+            boston_df2 = dataset.download("boston.parquet", df=True)
+            self.assertEqual(len(boston_df1.index), len(boston_df2.index))
+            self.assertTrue(pd.DataFrame.equals(boston_df1, boston_df2))
 
         finally:
             if dataset:
@@ -215,7 +221,8 @@ class SDKTests(unittest.TestCase, TestMixin):
             if dataset:
                 dataset.delete()
 
-    def test_sdk_upload_download_1gb(self):
+    # slowing down CD/CI pipeline, this test is run manually
+    def OFFtest_sdk_upload_download_1gb(self):
         dataset = None
         try:
             dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 1 GB")
@@ -224,6 +231,7 @@ class SDKTests(unittest.TestCase, TestMixin):
             if dataset:
                 dataset.delete()
 
+    # slowing down CD/CI pipeline, this test is run manually
     def OFFtest_sdk_upload_download_4gb(self):
         dataset = None
         try:

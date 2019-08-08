@@ -9,9 +9,13 @@ import io
 from analitico import AnaliticoException, logger
 from analitico.mixin import AttributeMixin
 from analitico.utilities import save_text, subprocess_run
+from analitico.constants import CSV_SUFFIXES, PARQUET_SUFFIXES
+from analitico.pandas import pd_read_csv
 
 from collections import OrderedDict
 from pathlib import Path
+
+DF_SUPPORTED_FORMATS = (".parquet", ".csv")
 
 
 class Item(AttributeMixin):
@@ -56,31 +60,20 @@ class Item(AttributeMixin):
     def upload(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None) -> bool:
 
         if isinstance(df, pd.DataFrame):
-            if not filepath:
-                filepath = "data.parquet"
-
-            if not isinstance(filepath, Path):
-                filepath = Path(filepath)
-
-            supported_formats = (".parquet", ".csv")
-            format = filepath.suffix
-            if format not in supported_formats:
-                raise AnaliticoException(
-                    f"Supported formats for automatic dataframe encoding are: {str(supported_formats)}"
-                )
+            if not remotepath:
+                remotepath = filepath if filepath else "data.parquet"
 
             # encode dataframe to disk temporarily
-            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=format) as f:
-                try:
-                    if format == ".parquet":
-                        df.to_parquet(f.name)
-                    elif format == ".csv":
-                        df.to_csv(f.name)
-                except Exception as exc:
-                    logger.error(f"upload - cannot write dataset to {f.name} because: {exc}")
-                    raise exc
-
-                return self.upload(filepath=f.name, remotepath=filepath)
+            suffix = Path(remotepath).suffix
+            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=suffix) as f:
+                if suffix in PARQUET_SUFFIXES:
+                    df.to_parquet(f.name)
+                elif suffix in CSV_SUFFIXES:
+                    df.to_csv(f.name)
+                else:
+                    msg = f"{remotepath} is not in a supported format."
+                    raise AnaliticoException(msg, status_code=400)
+                return self.upload(filepath=f.name, remotepath=remotepath)
 
         # need to specify a file, directory or Path that should be uploaded to this item's storage
         if not isinstance(filepath, str) and not isinstance(filepath, Path):
@@ -156,36 +149,47 @@ class Item(AttributeMixin):
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
 
     def download(
-        self, remotepath: str, filepath: str = None, stream: bool = False, binary: bool = True, df: bool = False
+        self, remotepath: str, filepath: str = None, stream: bool = False, binary: bool = True, df: str = None
     ):
         """
         Downloads the file asset associated with this item to a file, stream or dataframe.
         
         Arguments:
-            remotepath {str} -- The path of the file asset, eg. file.txt
+            remotepath {str} -- The path of the file asset, eg. data.csv
 
         Keyword Arguments:
             filepath {str} -- The file path where this asset should be saved, or None.
-            stream {bool} -- True if a stream should be returned.
-            binary {bool} -- True if downloaded as binary, false for text. (default: {True})
-            df {bool} -- True if the file should is a .csv or .parquet and should be returned as Pandas dataframe.
+            stream {bool} -- True if file should be returned as a stream.
+            df {bool} -- True if file should be returned as pandas dataframe.
+            binary {bool} -- True for binary downloads, false for text. (default: {True})
 
         Returns:
             The download stream or dataframe or nothing if saved to file.
         """
-        # TODO if we're running serverless or in jupyter the assets may already be on a locally mounted drive (optimize)
-
         url = self.url + "/files/" + remotepath
         url_stream = self.sdk.get_url_stream(url, binary=binary)
+        # TODO if we're running serverless or in jupyter the assets may already be on a locally mounted drive (optimize)
+
         if stream:
             return url_stream
 
-        with open(filepath, "w+b") as f:
-            for chunk in iter(url_stream):
-                f.write(chunk)
+        if filepath:
+            with open(filepath, "w+b") as f:
+                for chunk in iter(url_stream):
+                    f.write(chunk)
 
         if df:
-            raise NotImplementedError()
+            suffix = Path(remotepath).suffix
+            with tempfile.NamedTemporaryFile(prefix="df_", suffix=suffix) as f:
+                for chunk in iter(url_stream):
+                    f.write(chunk)
+                if suffix in CSV_SUFFIXES:
+                    return pd_read_csv(f.name)
+                elif suffix in PARQUET_SUFFIXES:
+                    return pd.read_parquet(f.name)
+                else:
+                    msg = f"Can't read {df} to a pandas dataframe, please load .csv or .parquet files."
+                    raise AnaliticoException(msg, status_code=400)
 
     def save(self) -> bool:
         """ Save any changes to the service. """

@@ -244,7 +244,6 @@ class AnaliticoSDK(AttributeMixin):
             for chunk in response.iter_content(chunk_size):
                 yield chunk
 
-
     def get_url_json(self, url: str, json: dict = None, method: str = "GET", status_code: int = 200) -> dict:
         """
         Get a json response from given url. If the url starts with analitico:// it will be
