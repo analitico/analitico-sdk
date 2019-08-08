@@ -6,11 +6,14 @@ import string
 import io
 import json
 import datetime
+import tempfile
 
 import analitico
 from analitico import logger, authorize_sdk
 from analitico.factory import Factory
 from analitico.schema import generate_schema
+from analitico.utilities import id_generator, time_ms
+from analitico.models import Item, Dataset, Recipe, Notebook
 
 from .test_mixin import TestMixin
 
@@ -25,6 +28,7 @@ assert (
 
 
 TITANIC_PUBLIC_URL = "https://storage.googleapis.com/public.analitico.ai/data/titanic/train.csv"
+MB_SIZE = 1024 * 1024
 
 
 class SDKTests(unittest.TestCase, TestMixin):
@@ -40,6 +44,65 @@ class SDKTests(unittest.TestCase, TestMixin):
 
     def setUp(self):
         logger.info("SDKTests.setUp")
+
+    ##
+    ## Utility methods
+    ##
+
+    def upload_random_rainbows(self, item: Item, size: int):
+        """ Uploads random bytes to test upload limits, timeouts, etc. Size of upload is specified by caller. """
+        try:
+            # random directory to test subdirectory generation
+            #            path = f"/tst_dir_{id_generator(12)}/abc/def/ghi/unicorns.data"
+            remotepath = f"unicorns.data"
+
+            # random bytes to avoid compression, etc
+            data1 = bytearray(os.urandom(size))
+
+            # upload data to item's storage
+            with tempfile.NamedTemporaryFile() as f1:
+                f1.write(data1)
+                started_ms = time_ms()
+                item.upload(filepath=f1.name, remotepath=remotepath)
+
+                elapsed_ms = max(1, time_ms(started_ms))
+                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                msg = f"upload (file): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                logger.info(msg)
+
+            # download (streaming)
+            started_ms = time_ms()
+            stream2 = item.download(remotepath, stream=True)
+            with tempfile.NamedTemporaryFile() as f2:
+                for chunk in iter(stream2):
+                    f2.write(chunk)
+
+                elapsed_ms = max(1, time_ms(started_ms))
+                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                msg = f"download (stream): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                logger.info(msg)
+
+                f2.seek(0)
+                data2 = f2.file.read()
+                self.assertEqual(data1, data2)
+
+            # download data from item's storage
+            with tempfile.NamedTemporaryFile() as f3:
+                started_ms = time_ms()
+                item.download(remotepath, f3.name)
+                elapsed_ms = max(1, time_ms(started_ms))
+                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                msg = f"download (file): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                logger.info(msg)
+
+                data3 = f3.file.read()
+                self.assertEqual(data1, data3)
+
+        except Exception as exc:
+            raise
+
+        finally:
+            pass
 
     ##
     ## get
@@ -134,15 +197,38 @@ class SDKTests(unittest.TestCase, TestMixin):
             if dataset:
                 dataset.delete()
 
-    def test_upload_ilpes(self):
-        sdk = analitico.authorize_sdk(
-            endpoint="https://staging.analitico.ai/api/", token="tok_pbn6gxbj", workspace_id="ws_2q2fq3wg"
-        )
+    def test_sdk_upload_download_8mb(self):
+        dataset = None
+        try:
+            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 8 MB")
+            self.upload_random_rainbows(dataset, 8 * MB_SIZE)
+        finally:
+            if dataset:
+                dataset.delete()
 
-        dataset = sdk.get_dataset("ds_aqp195k4")
+    def test_sdk_upload_download_128mb(self):
+        dataset = None
+        try:
+            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 128 MB")
+            self.upload_random_rainbows(dataset, 128 * MB_SIZE)
+        finally:
+            if dataset:
+                dataset.delete()
 
-        from sklearn.datasets import load_boston
+    def test_sdk_upload_download_1gb(self):
+        dataset = None
+        try:
+            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 1 GB")
+            self.upload_random_rainbows(dataset, 1024 * MB_SIZE)
+        finally:
+            if dataset:
+                dataset.delete()
 
-        boston_dataset = load_boston()
-        boston_df = pd.DataFrame(boston_dataset.data, columns=boston_dataset.feature_names)
-        dataset.upload("boston.parquet", df=boston_df)
+    def OFFtest_sdk_upload_download_4gb(self):
+        dataset = None
+        try:
+            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 4 GB")
+            self.upload_random_rainbows(dataset, 4096 * MB_SIZE)
+        finally:
+            if dataset:
+                dataset.delete()

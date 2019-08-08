@@ -43,7 +43,8 @@ class AnaliticoSDK(AttributeMixin):
             assert token.startswith("tok_")
             self.set_attribute("token", token)
         if endpoint:
-            assert endpoint.startswith("http")
+            assert endpoint.startswith("https://")
+            assert endpoint.endswith("/")
             self.set_attribute("endpoint", endpoint)
 
         # set default workspace
@@ -220,6 +221,7 @@ class AnaliticoSDK(AttributeMixin):
         cache: bool = True,
         method: str = "GET",
         status_code: int = 200,
+        chunk_size: int = 256 * 1024,
     ):
         """
         Returns a stream to the given url. This works for regular http:// or https://
@@ -235,8 +237,13 @@ class AnaliticoSDK(AttributeMixin):
             msg = f"The response from {url} should have been {status_code} but instead it is {response.status_code}."
             raise AnaliticoException(msg)
         # always treat content as binary, utf-8 encoding is done by readers
-        response_stream = io.BytesIO(response.content)
-        return response_stream
+        if binary:
+            for chunk in response.iter_content(chunk_size):
+                yield chunk
+        else:
+            for chunk in response.iter_content(chunk_size):
+                yield chunk
+
 
     def get_url_json(self, url: str, json: dict = None, method: str = "GET", status_code: int = 200) -> dict:
         """

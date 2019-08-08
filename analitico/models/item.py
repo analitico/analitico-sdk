@@ -4,6 +4,7 @@ import tempfile
 import urllib
 import requests
 import base64
+import io
 
 from analitico import AnaliticoException, logger
 from analitico.mixin import AttributeMixin
@@ -153,6 +154,38 @@ class Item(AttributeMixin):
                     # a,b = subprocess_run(sync_cmd)
 
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
+
+    def download(
+        self, remotepath: str, filepath: str = None, stream: bool = False, binary: bool = True, df: bool = False
+    ):
+        """
+        Downloads the file asset associated with this item to a file, stream or dataframe.
+        
+        Arguments:
+            remotepath {str} -- The path of the file asset, eg. file.txt
+
+        Keyword Arguments:
+            filepath {str} -- The file path where this asset should be saved, or None.
+            stream {bool} -- True if a stream should be returned.
+            binary {bool} -- True if downloaded as binary, false for text. (default: {True})
+            df {bool} -- True if the file should is a .csv or .parquet and should be returned as Pandas dataframe.
+
+        Returns:
+            The download stream or dataframe or nothing if saved to file.
+        """
+        # TODO if we're running serverless or in jupyter the assets may already be on a locally mounted drive (optimize)
+
+        url = self.url + "/files/" + remotepath
+        url_stream = self.sdk.get_url_stream(url, binary=binary)
+        if stream:
+            return url_stream
+
+        with open(filepath, "w+b") as f:
+            for chunk in iter(url_stream):
+                f.write(chunk)
+
+        if df:
+            raise NotImplementedError()
 
     def save(self) -> bool:
         """ Save any changes to the service. """
