@@ -46,13 +46,24 @@ class SDKTests(unittest.TestCase, TestMixin):
         """ Uploads random bytes to test upload limits, timeouts, etc. Size of upload is specified by caller. """
         try:
             # random directory to test subdirectory generation
-            #            path = f"/tst_dir_{id_generator(12)}/abc/def/ghi/unicorns.data"
-            remotepath = f"unicorns.data"
+            remotepath = f"tst_dir_{id_generator(12)}/abc/def/ghi/unicorns.data"
+            logger.info(f"\nupload {remotepath}")
 
             # random bytes to avoid compression, etc
             data1 = bytearray(os.urandom(size))
 
-            # upload data to item's storage
+            # upload data directly to item's storage
+            with tempfile.NamedTemporaryFile() as f1:
+                f1.write(data1)
+                started_ms = time_ms()
+                item.upload(filepath=f1.name, remotepath=remotepath, direct=True)
+
+                elapsed_ms = max(1, time_ms(started_ms))
+                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                msg = f"upload (direct): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                logger.info(msg)
+
+            # upload data to /files APIs
             with tempfile.NamedTemporaryFile() as f1:
                 f1.write(data1)
                 started_ms = time_ms()
@@ -60,7 +71,7 @@ class SDKTests(unittest.TestCase, TestMixin):
 
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"upload (file): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
             # download (streaming)

@@ -8,7 +8,7 @@ import io
 
 from analitico import AnaliticoException, logger
 from analitico.mixin import AttributeMixin
-from analitico.utilities import save_text, subprocess_run
+from analitico.utilities import save_text, subprocess_run, get_dict_dot
 from analitico.constants import CSV_SUFFIXES, PARQUET_SUFFIXES
 from analitico.pandas import pd_read_csv
 
@@ -26,9 +26,10 @@ class Item(AttributeMixin):
 
     def __init__(self, sdk, item_data: dict):
         # item's basics
+        assert sdk
         self.sdk = sdk
         self.id = item_data["id"]
-        self.type = item_data["type"]
+        self.type = item_data["type"].replace("analitico/", "")
         # big bag of open ended properties to be retrieved via get_attribute
         super().__init__(**item_data["attributes"])
 
@@ -52,12 +53,20 @@ class Item(AttributeMixin):
         item_url = f"analitico://{self.sdk.get_item_type(self.id)}s/{self.id}"
         item_url, _ = self.sdk.get_url_headers(item_url)
         return item_url
+    
+    @property
+    def workspace(self):
+        """ Returns the workspace that owns this item (or None if this is a workspace). """
+        if self.type == "workspace":
+            return self
+        workspace_id = self.get_attribute("workspace_id")
+        return self.sdk.get_workspace(workspace_id) if workspace_id else None
 
     ##
     ## Methods
     ##
 
-    def upload(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None) -> bool:
+    def upload(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None, direct: bool = False, **kwargs) -> bool:
 
         if isinstance(df, pd.DataFrame):
             if not remotepath:
@@ -80,6 +89,17 @@ class Item(AttributeMixin):
             if not remotepath:
                 remotepath = Path(filepath).name
 
+            # no absolute paths
+            assert not remotepath.startswith("/"), "remotepath should be relative, eg: flower.jpg or flowers/flower.jpg"
+
+            if direct:
+                try:
+                    # see if we can upload directly to storage
+                    if self.upload_directly_to_storage(filepath, remotepath):
+                        return True
+                except AnaliticoException as exc:
+                    logger.error(f"upload - direct to storage failed, will try via /files APIs, exc: {exc}")
+
             url = self.url + "/files/" + remotepath
             url, headers = self.sdk.get_url_headers(url)
 
@@ -92,97 +112,47 @@ class Item(AttributeMixin):
 
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
 
-    # DEPRECATED
-    def upload_direct(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None) -> bool:
 
-        if isinstance(df, pd.DataFrame):
-            if not remotepath:
-                remotepath = filepath if filepath else "data.parquet"
+    def upload_directly_to_storage(self, filepath: str = None, remotepath: str = None) -> bool:
 
-            # encode dataframe to disk temporarily
-            suffix = Path(remotepath).suffix
-            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=suffix) as f:
-                if suffix in PARQUET_SUFFIXES:
-                    df.to_parquet(f.name)
-                elif suffix in CSV_SUFFIXES:
-                    df.to_csv(f.name)
-                else:
-                    msg = f"{remotepath} is not in a supported format."
-                    raise AnaliticoException(msg, status_code=400)
-                return self.upload(filepath=f.name, remotepath=remotepath)
-
-        # need to specify a file, directory or Path that should be uploaded to this item's storage
-        if not isinstance(filepath, str) and not isinstance(filepath, Path):
-            raise AnaliticoException("Please provide a path to the file or files to be uploaded.")
-
-        if not remotepath:
-            remotepath = filepath
-
-        # uploading a single file?
-        if os.path.isfile(filepath):
-            # retrieve workspace associated with this item
-            workspace_id = self.get_attribute("workspace_id")
-            workspace = self.sdk.get_workspace(workspace_id)
-
-            # storage configuration for this workspace
+        workspace = self.workspace
+        if workspace:
             storage = workspace.get_attribute("storage")
-            assert storage["driver"] == "hetzner-webdav"
-            username = storage["credentials"]["username"]
-            password = storage["credentials"]["password"]
+            if "webdav" in storage.get("driver"):
+                # storage configuration for this workspace
+                server = storage['url']
+                user = get_dict_dot(storage, "credentials.username")
+                password = get_dict_dot(storage, "credentials.password")
 
-            if True:
-                # TODO move driver to public repo and use mkdirs
-                # TODO supports only files in base directory, should support recursive
-                remote_url = f"{storage['url']}/{self.sdk.get_item_type(self.id)}s/"
-                response = requests.request("MKCOL", remote_url, auth=(username, password))
-                remote_url += f"{self.id}/"
-                response = requests.request("MKCOL", remote_url, auth=(username, password))
+                remotepath = f"{self.type}s/{self.id}/{remotepath}"
 
                 with open(filepath, "rb") as f:
-                    remote_url += str(remotepath)
-                    try:
-                        response = requests.put(remote_url, data=f, auth=(username, password))
-                    except Exception as exc:
-                        logger.error(f"upload - cannot upload to {remote_url} because: {exc}")
-                        raise exc
-                    if response.status_code not in (200, 201, 204):
-                        msg = f"Uploaded to {remote_url} and expected a status 200, 201 or 204 but received: {response.status_code}"
-                        logger.error(msg)
-                        raise AnaliticoException(msg, status_code=response.status_code)
+                    # direct upload implies the containing directory already exists
+                    url = f"{server}/{remotepath}"
+                    response = requests.put(url, data=f, auth=(user, password))
+                    if response.status_code in (200, 201, 204):
+                        return True
 
-                    return True
+                # probably missing the directory
+                if response.status_code == 403:
+                    parts = remotepath.split("/")[:-1]
+                    parts_url = server + "/"
+                    for part in parts:
+                        parts_url += part + "/"
+                        response = requests.request("MKCOL", parts_url, auth=(user, password))
+                        if response.status_code not in (405, 200, 201, 204):
+                            msg = f"An error occoured while creating directory {parts_url}"
+                            raise AnaliticoException(msg, status_code=response.status_code)
 
-            if False:
-                rsync_path = f"{username}@{username}.your-storagebox.de"
-                #                rsync_path = f"{rsync_path}:./{self.sdk.get_item_type(self.id)}s/{self.id}/{remotepath}"
-                rsync_path = f"{rsync_path}:./pippo_{remotepath}"
+                    # now we can retry uploading the file as we know for sure its directory exists
+                    with open(filepath, "rb") as f:
+                        response = requests.put(url, data=f, auth=(user, password))
+                        if response.status_code in (200, 201, 204):
+                            return True
 
-                with tempfile.NamedTemporaryFile(suffix=".id_rsa") as key:
-                    signature = storage["credentials"]["ssh_private_key"]
-                    signature = str(base64.b64decode(signature), "ascii")
-                    save_text(signature, key.name)
-                    os.chmod(key.name, 0o600)
-
-                    with tempfile.NamedTemporaryDirectory() as tempdir:
-                        # create relative paths
-                        pass
-
-                    sync_cmd = [
-                        "rsync",
-                        "--recursive",
-                        "--progress",
-                        "-L",  # follow symlinks
-                        "-e",
-                        f"'ssh -p23 -o StrictHostKeyChecking=no -i {key.name}'",
-                        filepath,
-                        rsync_path,
-                    ]
-                    cmd = " ".join(sync_cmd)
-                    os.system(cmd)
-
-                    # a,b = subprocess_run(sync_cmd)
-
-        raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
+                msg = f"An error occoured while uploading {url}"
+                raise AnaliticoException(msg, status_code=response.status_code)
+        return False
 
 
     def download(
