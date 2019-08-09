@@ -216,4 +216,4 @@ class Item(AttributeMixin):
 
     def to_dict(self) -> dict:
         """ Return item as a dictionary. """
-        return {"id": self.id, "type": self.type, "attributes": self.attributes}
+        return {"id": self.id, "type": "analitico/" + self.type, "attributes": self.attributes}
