@@ -117,14 +117,14 @@ class SDKTests(unittest.TestCase, TestMixin):
         self.assertIsNotNone(item)
         self.assertIsInstance(item, analitico.Recipe)
         self.assertTrue(item.id.startswith(analitico.RECIPE_PREFIX))
-        self.assertEqual(item.type, "analitico/recipe")
+        self.assertEqual(item.type, "recipe")
 
     def test_sdk_get_recipe(self):
         recipe = self.sdk.get_recipe("rx_ho374b88")
         self.assertIsNotNone(recipe)
         self.assertIsInstance(recipe, analitico.Recipe)
         self.assertTrue(recipe.id.startswith(analitico.RECIPE_PREFIX))
-        self.assertEqual(recipe.type, "analitico/recipe")
+        self.assertEqual(recipe.type, "recipe")
 
     ##
     ## create
@@ -137,7 +137,7 @@ class SDKTests(unittest.TestCase, TestMixin):
             self.assertIsNotNone(item)
             self.assertIsInstance(item, analitico.Dataset)
             self.assertTrue(item.id.startswith(analitico.DATASET_PREFIX))
-            self.assertEqual(item.type, "analitico/dataset")
+            self.assertEqual(item.type, "dataset")
         finally:
             if item:
                 item.delete()
