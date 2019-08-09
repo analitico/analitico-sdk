@@ -19,15 +19,8 @@ from .status import STATUS_FAILED
 import analitico.utilities
 import analitico.models
 
-from analitico.utilities import id_generator
+from analitico.utilities import id_generator, logger
 from analitico.models import Workspace, Item, Dataset, Recipe, Notebook
-
-import logging
-
-logger = logging.getLogger("analitico")
-
-# read http streams in chunks
-HTTP_BUFFER_SIZE = 32 * 1024 * 1024  # 32 MiBs
 
 ##
 ## Models used in the SDK
@@ -88,48 +81,8 @@ class AnaliticoSDK(AttributeMixin):
         return self.get_attribute("endpoint")
 
     ##
-    ## Temp and cache directories
-    ##
-
-    # Temporary directory which is deleted when factory is disposed
-    _temp_directory = None
-
-    # Artifacts end up in the current working directory
-    _artifacts_directory = None
-
-    def get_temporary_directory(self):
-        """ Temporary directory that can be used while a factory is used and deleted afterwards """
-        temp_dir = os.path.join(tempfile.gettempdir(), "analitico_temp")
-        if not os.path.isdir(temp_dir):
-            os.mkdir(temp_dir)
-        return temp_dir
-
-    def get_artifacts_directory(self):
-        """ 
-        A plugin or notebook can produce various file artifacts during execution and place
-        them in this directory (datasets, statistics, models, etc). A subclass, for example
-        a factory used to run pipelines on the server, may persist files created here to cloud, etc.
-        """
-        return self._artifacts_directory
-
-    def get_cache_directory(self):
-        """ Returns directory to be used for caches """
-        cache_dir = os.path.join(tempfile.gettempdir(), "analitico_cache")
-        if not os.path.isdir(cache_dir):
-            os.mkdir(cache_dir)
-        return cache_dir
-
-    def get_cache_filename(self, unique_id):
-        """ Returns the fullpath in cache for an item with the given unique_id (eg: a unique url, an md5 or etag, etc) """
-        # Tip: if cache contents need to be invalidated for whatever reason, you can change the prefix below...
-        return os.path.join(self.get_cache_directory(), "cache_v2_" + hashlib.sha256(unique_id.encode()).hexdigest())
-
-    ##
     ## Internal Utilities
     ##
-
-    # regular expression used to detect assets using analitico:// scheme
-    ANALITICO_ASSET_RE = r"(analitico://workspaces/(?P<workspace_id>[-\w.]{4,256})/)"
 
     EMAIL_RE = r"[^@]+@[^@]+\.[^@]+"  # very rough check
 
@@ -156,32 +109,8 @@ class AnaliticoSDK(AttributeMixin):
             return analitico.WORKSPACE_TYPE
         if re.match(self.EMAIL_RE, item_id):
             return analitico.USER_TYPE
-        self.warning("Factory.get_item_type - couldn't find type for: " + item_id)
+        self.warning("get_item_type - couldn't find type for: " + item_id)
         return None
-
-    # TODO could check if it would be possible to switch to an external caching library, eg:
-    # https://github.com/ionrock/cachecontrol
-
-    def get_cached_stream(self, stream, unique_id):
-        """ Will cache a stream on disk based on a unique_id (like md5 or etag) and return file stream and filename """
-        cache_file = self.get_cache_filename(unique_id)
-        if not os.path.isfile(cache_file):
-            # if not cached already, download and cache
-            cache_temp_file = cache_file + ".tmp_" + id_generator()
-
-            with open(cache_temp_file, "wb") as f:
-                if hasattr(stream, "read"):
-                    for chunk in iter(lambda: stream.read(HTTP_BUFFER_SIZE), b""):
-                        f.write(chunk)
-                else:
-                    for b in stream:
-                        f.write(b)
-
-            # TODO add progress bar for slow downloads https://github.com/tqdm/tqdm#iterable-based
-
-            os.rename(cache_temp_file, cache_file)
-        # return stream from cached file
-        return open(cache_file, "rb"), cache_file
 
     def get_url_headers(self, url: str) -> (str, dict):
         # If the url uses the analitico:// scheme for assets stored on the cloud
@@ -189,9 +118,7 @@ class AnaliticoSDK(AttributeMixin):
         # If the url points to an analitico API call, the request will have the
         # ?token= authorization token header added to it.
         # temporarily while all internal urls are updated to analitico://
-        assert url and isinstance(url, str)
-        if url.startswith("workspaces/ws_"):
-            url = analitico.ANALITICO_URL_PREFIX + url
+        assert isinstance(url, str)
         # see if assets uses analitico://workspaces/... scheme
         if url.startswith("analitico://"):
             if not self.endpoint:
@@ -221,17 +148,17 @@ class AnaliticoSDK(AttributeMixin):
         cache: bool = True,
         method: str = "GET",
         status_code: int = 200,
-        chunk_size: int = 256 * 1024,
+        chunk_size: int = 1024 * 1024,
     ):
         """
         Returns a stream to the given url. This works for regular http:// or https://
         and also works for analitico:// assets which are converted to calls to the given
         endpoint with proper authorization tokens. The stream is returned as an iterator.
         """
-        url, headers = self.get_url_headers(url)
         # we should not take the raw response stream here as it could be gzipped or encoded.
         # we take the decoded content as a text string and turn it into a stream or we take the
         # decompressed binary content and also turn it into a stream.
+        url, headers = self.get_url_headers(url)
         response = requests.request(method, url, data=data, files=files, stream=True, headers=headers)
         if status_code and response.status_code != status_code:
             msg = f"The response from {url} should have been {status_code} but instead it is {response.status_code}."

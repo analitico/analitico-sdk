@@ -75,6 +75,42 @@ class Item(AttributeMixin):
                     raise AnaliticoException(msg, status_code=400)
                 return self.upload(filepath=f.name, remotepath=remotepath)
 
+        # uploading a single file?
+        if os.path.isfile(filepath):
+            if not remotepath:
+                remotepath = Path(filepath).name
+
+            url = self.url + "/files/" + remotepath
+            url, headers = self.sdk.get_url_headers(url)
+
+            with open(filepath, "rb") as f:
+                response = requests.put(url, data=f, headers=headers)
+                if response.status_code not in (200, 204):
+                    msg = f"Could not upload {filepath} to {url}, status: {response.status_code}"
+                    raise AnaliticoException(msg, status_code=response.status)
+                return True
+
+        raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
+
+    # DEPRECATED
+    def upload_direct(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None) -> bool:
+
+        if isinstance(df, pd.DataFrame):
+            if not remotepath:
+                remotepath = filepath if filepath else "data.parquet"
+
+            # encode dataframe to disk temporarily
+            suffix = Path(remotepath).suffix
+            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=suffix) as f:
+                if suffix in PARQUET_SUFFIXES:
+                    df.to_parquet(f.name)
+                elif suffix in CSV_SUFFIXES:
+                    df.to_csv(f.name)
+                else:
+                    msg = f"{remotepath} is not in a supported format."
+                    raise AnaliticoException(msg, status_code=400)
+                return self.upload(filepath=f.name, remotepath=remotepath)
+
         # need to specify a file, directory or Path that should be uploaded to this item's storage
         if not isinstance(filepath, str) and not isinstance(filepath, Path):
             raise AnaliticoException("Please provide a path to the file or files to be uploaded.")
@@ -147,6 +183,7 @@ class Item(AttributeMixin):
                     # a,b = subprocess_run(sync_cmd)
 
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
+
 
     def download(
         self, remotepath: str, filepath: str = None, stream: bool = False, binary: bool = True, df: str = None

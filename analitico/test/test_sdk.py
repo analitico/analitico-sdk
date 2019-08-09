@@ -1,17 +1,12 @@
 import unittest
 import os.path
 import pandas as pd
-import random
-import string
-import io
-import json
 import datetime
 import tempfile
 
 import analitico
-from analitico import logger, authorize_sdk
-from analitico.factory import Factory
-from analitico.schema import generate_schema
+
+from analitico import logger, AnaliticoException
 from analitico.utilities import id_generator, time_ms
 from analitico.models import Item, Dataset, Recipe, Notebook
 
@@ -21,13 +16,9 @@ from .test_mixin import TestMixin
 
 ANALITICO_TEST_TOKEN = os.environ["ANALITICO_TEST_TOKEN"]
 ANALITICO_TEST_WORKSPACE_ID = os.environ["ANALITICO_TEST_WORKSPACE_ID"]
-assert ANALITICO_TEST_TOKEN, "The enviroment variable ANALITICO_TEST_TOKEN should be set with a test token."
-assert (
-    ANALITICO_TEST_WORKSPACE_ID
-), "The enviroment variable ANALITICO_TEST_WORKSPACE_ID should be set with a test token."
-
 
 TITANIC_PUBLIC_URL = "https://storage.googleapis.com/public.analitico.ai/data/titanic/train.csv"
+
 MB_SIZE = 1024 * 1024
 
 
@@ -43,7 +34,9 @@ class SDKTests(unittest.TestCase, TestMixin):
     )
 
     def setUp(self):
-        logger.info("SDKTests.setUp")
+        if not (ANALITICO_TEST_TOKEN and ANALITICO_TEST_WORKSPACE_ID):
+            msg = "The enviroment variable ANALITICO_TEST_TOKEN and ANALITICO_TEST_WORKSPACE_ID should be set to run this test."
+            raise AnaliticoException(msg)
 
     ##
     ## Utility methods
@@ -98,7 +91,7 @@ class SDKTests(unittest.TestCase, TestMixin):
                 data3 = f3.file.read()
                 self.assertEqual(data1, data3)
 
-        except Exception as exc:
+        except Exception:
             raise
 
         finally:
@@ -187,6 +180,7 @@ class SDKTests(unittest.TestCase, TestMixin):
             title = "Boston test at " + datetime.datetime.utcnow().isoformat()
             dataset = self.sdk.create_item(analitico.DATASET_TYPE, title=title)
 
+            # import is here to avoid importing the dependency unless run
             from sklearn.datasets import load_boston
 
             # upload boston dataframe to service
@@ -222,7 +216,7 @@ class SDKTests(unittest.TestCase, TestMixin):
                 dataset.delete()
 
     # slowing down CD/CI pipeline, this test is run manually
-    def OFFtest_sdk_upload_download_1gb(self):
+    def test_sdk_upload_download_1gb(self):
         dataset = None
         try:
             dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 1 GB")

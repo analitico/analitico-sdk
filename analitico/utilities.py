@@ -1,21 +1,15 @@
 import os
 import time
-import pandas as pd
 import logging
 import socket
 import platform
 import multiprocessing
-import psutil
 import collections
 import subprocess
 import sys
 import random
-import string
-import dateutil
 import re
-import subprocess
 import traceback
-import shutil
 
 from collections import OrderedDict
 
@@ -28,27 +22,16 @@ import simplejson as json
 from datetime import datetime
 
 try:
+    import psutil
     import distro
     import GPUtil
 except Exception:
     pass
 
 from analitico.exceptions import AnaliticoException
-from analitico.schema import analitico_to_pandas_type, apply_schema, NA_VALUES
 
 # default logger for analitico's libraries
 logger = logging.getLogger("analitico")
-
-
-# RESTful API Design Tips from Experience
-# https://medium.com/studioarmix/learn-restful-api-design-ideals-c5ec915a430f
-
-# Trying to follow this spec for naming, etc
-# https://jsonapi.org/format/#document-top-level
-
-# Following this format for errors:
-# https://jsonapi.org/format/#errors
-
 
 ##
 ## Exceptions
@@ -72,14 +55,14 @@ def exception_to_dict(exception: Exception, add_context=True, add_formatted=True
     d = OrderedDict()
     d["status"] = "500"  # want this to go first
     d["code"] = type(exception).__name__.lower()
-    d["title"] = str(exception.args[0]) if len(exception.args) > 0 else str(exception)
+    d["title"] = str(exception.args[0]) if exception.args else str(exception)
     d["meta"] = {}
 
     if isinstance(exception, AnaliticoException):
         d["status"] = str(exception.status_code)
         d["code"] = exception.code
         d["title"] = exception.message
-        if exception.extra and len(exception.extra) > 0:
+        if exception.extra and exception.extra:
             d["meta"]["extra"] = json_sanitize_dict(exception.extra)
 
     if add_context and exception.__context__:
@@ -113,7 +96,7 @@ def exception_to_dict(exception: Exception, add_context=True, add_formatted=True
 
     if d["status"] is None:
         d.pop("status")
-    if len(d["meta"]) < 1:
+    if not d["meta"]:
         d.pop("meta")
     return d
 
@@ -220,7 +203,7 @@ def get_runtime():
         try:
             # will raise exception on virtual machines
             hardware["cpu"]["freq"] = int(psutil.cpu_freq()[2])
-        except:
+        except Exception:
             pass
 
         gpu = get_gpu_runtime()
@@ -254,7 +237,7 @@ def get_runtime():
         try:
             v = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
             runtime["github"]["version"] = v
-        except:
+        except Exception:
             pass
         commit_sha = os.environ.get("ANALITICO_COMMIT_SHA", None)
         if commit_sha:
@@ -274,18 +257,18 @@ def get_runtime():
 JSON_NOT_SERIALIZABLE = "NOT_SERIALIZABLE"
 
 
-def json_sanitize_dict(dict):
+def json_sanitize_dict(items):
     """ Remove from dictionary all items which cannot be easily serialized to json, replace with item_id where possible. """
-    sanitized = json.loads(json.dumps(dict, skipkeys=True, default=lambda o: JSON_NOT_SERIALIZABLE))
-    for key in dict:
+    sanitized = json.loads(json.dumps(items, skipkeys=True, default=lambda o: JSON_NOT_SERIALIZABLE))
+    for key in items:
         if sanitized[key] == JSON_NOT_SERIALIZABLE:
             try:
                 # if an item could note be serialized, let's see if we can replace it with its id
                 key_id = key + "_id"
                 if key_id not in sanitized:
-                    sanitized[key_id] = dict[key].id
+                    sanitized[key_id] = items[key].id
                     sanitized.pop(key)
-            except:
+            except Exception:
                 # item doesn't have an .id
                 pass
     return sanitized
@@ -347,7 +330,7 @@ def timeit(method):
         if hasattr(args[0], "logger"):
             try:
                 args[0].logger.info(f"{method.__name__.lower()} in {ms} ms")
-            except:
+            except Exception:
                 pass
         else:
             logger.info(f"\n{method.__name__.lower()} in {ms} ms")
@@ -452,7 +435,7 @@ def comma_separated_to_array(items: str) -> [str]:
 
 def array_to_comma_separated(items: [str]) -> str:
     """ Turns an array of items into a comma separated string """
-    if items and len(items) > 0:
+    if items and items:
         return ",".join(items)
     return None
 
@@ -466,7 +449,7 @@ def json_from_string_if_possible(value: str):
     """ If your string is json then it will be parsed and returned otherwise you just get your string back """
     try:
         return json.loads(value) if len(value) > 4 else value
-    except:
+    except Exception:
         pass
     return value
 
