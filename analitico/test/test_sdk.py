@@ -63,16 +63,17 @@ class SDKTests(unittest.TestCase, TestMixin):
                 msg = f"upload (direct): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
-            # upload data to /files APIs
-            with tempfile.NamedTemporaryFile() as f1:
-                f1.write(data1)
-                started_ms = time_ms()
-                item.upload(filepath=f1.name, remotepath=remotepath)
+            if False:
+                # upload data to /files APIs
+                with tempfile.NamedTemporaryFile() as f1:
+                    f1.write(data1)
+                    started_ms = time_ms()
+                    item.upload(filepath=f1.name, remotepath=remotepath)
 
-                elapsed_ms = max(1, time_ms(started_ms))
-                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
-                logger.info(msg)
+                    elapsed_ms = max(1, time_ms(started_ms))
+                    kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                    msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                    logger.info(msg)
 
             # download (streaming)
             started_ms = time_ms()
