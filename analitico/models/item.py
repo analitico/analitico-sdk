@@ -107,7 +107,7 @@ class Item(AttributeMixin):
                 response = requests.put(url, data=f, headers=headers)
                 if response.status_code not in (200, 204):
                     msg = f"Could not upload {filepath} to {url}, status: {response.status_code}"
-                    raise AnaliticoException(msg, status_code=response.status)
+                    raise AnaliticoException(msg, status_code=response.status_code)
                 return True
 
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
