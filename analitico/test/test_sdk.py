@@ -114,7 +114,7 @@ class SDKTests(unittest.TestCase, TestMixin):
 
     def test_sdk_get_item(self):
         item = self.sdk.get_item("rx_ho374b88")
-        
+
         self.assertIsNotNone(item)
         self.assertIsInstance(item, analitico.Recipe)
         self.assertTrue(item.id.startswith(analitico.RECIPE_PREFIX))
@@ -222,17 +222,17 @@ class SDKTests(unittest.TestCase, TestMixin):
             if dataset:
                 dataset.delete()
 
-    def test_sdk_upload_download_128mb(self):
+    def test_sdk_upload_download_64mb(self):
         dataset = None
         try:
-            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 128 MB")
-            self.upload_random_rainbows(dataset, 128 * MB_SIZE)
+            dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 64 MB")
+            self.upload_random_rainbows(dataset, 64 * MB_SIZE)
         finally:
             if dataset:
                 dataset.delete()
 
     # slowing down CD/CI pipeline, this test is run manually
-    def test_sdk_upload_download_1gb(self):
+    def OFFtest_sdk_upload_download_1gb(self):
         dataset = None
         try:
             dataset = self.sdk.create_item(analitico.DATASET_TYPE, title="Upload 1 GB")
