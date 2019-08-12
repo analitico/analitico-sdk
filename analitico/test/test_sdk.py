@@ -63,18 +63,6 @@ class SDKTests(unittest.TestCase, TestMixin):
                 msg = f"upload (direct): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
-            if False:
-                # upload data to /files APIs
-                with tempfile.NamedTemporaryFile() as f1:
-                    f1.write(data1)
-                    started_ms = time_ms()
-                    item.upload(filepath=f1.name, remotepath=remotepath)
-
-                    elapsed_ms = max(1, time_ms(started_ms))
-                    kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                    msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
-                    logger.info(msg)
-
             # download (streaming)
             started_ms = time_ms()
             stream2 = item.download(remotepath, stream=True)
@@ -84,12 +72,23 @@ class SDKTests(unittest.TestCase, TestMixin):
 
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"download (stream): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"download (streaming): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
                 f2.seek(0)
                 data2 = f2.file.read()
                 self.assertEqual(data1, data2)
+
+            # upload data to /files APIs
+            with tempfile.NamedTemporaryFile() as f1:
+                f1.write(data1)
+                started_ms = time_ms()
+                item.upload(filepath=f1.name, remotepath=remotepath)
+
+                elapsed_ms = max(1, time_ms(started_ms))
+                kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
+                msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                logger.info(msg)
 
             # download data from item's storage
             with tempfile.NamedTemporaryFile() as f3:

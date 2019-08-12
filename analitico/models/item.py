@@ -53,7 +53,7 @@ class Item(AttributeMixin):
         item_url = f"analitico://{self.sdk.get_item_type(self.id)}s/{self.id}"
         item_url, _ = self.sdk.get_url_headers(item_url)
         return item_url
-    
+
     @property
     def workspace(self):
         """ Returns the workspace that owns this item (or None if this is a workspace). """
@@ -63,64 +63,21 @@ class Item(AttributeMixin):
         return self.sdk.get_workspace(workspace_id) if workspace_id else None
 
     ##
-    ## Methods
+    ## Internals
     ##
 
-    def upload(self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None, direct: bool = True) -> bool:
-
-        if isinstance(df, pd.DataFrame):
-            if not remotepath:
-                remotepath = filepath if filepath else "data.parquet"
-
-            # encode dataframe to disk temporarily
-            suffix = Path(remotepath).suffix
-            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=suffix) as f:
-                if suffix in PARQUET_SUFFIXES:
-                    df.to_parquet(f.name)
-                elif suffix in CSV_SUFFIXES:
-                    df.to_csv(f.name)
-                else:
-                    msg = f"{remotepath} is not in a supported format."
-                    raise AnaliticoException(msg, status_code=400)
-                return self.upload(filepath=f.name, remotepath=remotepath)
-
-        # uploading a single file?
-        if os.path.isfile(filepath):
-            if not remotepath:
-                remotepath = Path(filepath).name
-
-            # no absolute paths
-            assert not remotepath.startswith("/"), "remotepath should be relative, eg: flower.jpg or flowers/flower.jpg"
-
-            if direct:
-                try:
-                    # see if we can upload directly to storage
-                    if self.upload_directly_to_storage(filepath, remotepath):
-                        return True
-                except AnaliticoException as exc:
-                    logger.error(f"upload - direct to storage failed, will try via /files APIs, exc: {exc}")
-
-            url = self.url + "/files/" + remotepath
-            url, headers = self.sdk.get_url_headers(url)
-
-            with open(filepath, "rb") as f:
-                response = requests.put(url, data=f, headers=headers)
-                if response.status_code not in (200, 204):
-                    msg = f"Could not upload {filepath} to {url}, status: {response.status_code}"
-                    raise AnaliticoException(msg, status_code=response.status)
-                return True
-
-        raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
-
-
-    def upload_directly_to_storage(self, filepath: str = None, remotepath: str = None) -> bool:
-
+    def _upload_directly_to_storage(self, filepath: str = None, remotepath: str = None) -> bool:
+        """
+        Upload a file directly to storage using webdav. This puts less load on the server
+        for larger uploads but has a few drawbacks including not generating automatic triggers
+        on the service, notifications, etc.
+        """
         workspace = self.workspace
         if workspace:
             storage = workspace.get_attribute("storage")
             if "webdav" in storage.get("driver"):
                 # storage configuration for this workspace
-                server = storage['url']
+                server = storage["url"]
                 user = get_dict_dot(storage, "credentials.username")
                 password = get_dict_dot(storage, "credentials.password")
 
@@ -154,6 +111,75 @@ class Item(AttributeMixin):
                 raise AnaliticoException(msg, status_code=response.status_code)
         return False
 
+    ##
+    ## Methods
+    ##
+
+    def upload(
+        self, filepath: str = None, df: pd.DataFrame = None, remotepath: str = None, direct: bool = True
+    ) -> bool:
+        """
+        Upload a file to the storage drive associated with this item. You can upload a file by indicating its
+        filepath on the local disk or by handing a Pandas dataframe which is automatically saved to a file and
+        then uploaded.
+        
+        Keyword Arguments:
+            filepath {str} -- Local filepath (or None if passing a dataframe)
+            df {pd.DataFrame} -- A dataframe that should be saved and uploaded (or None if passing a filepath)
+            remotepath {str} -- Path on remote driver, eg: file.txt, datasets/customers.csv, etc...
+            direct {bool} -- False if loaded via analitico APIs, true if loaded directly to storage.
+        
+        Returns:
+            bool -- True if the file was uploaded or an Exception explaining the problem.
+        """
+        if isinstance(df, pd.DataFrame):
+            if not remotepath:
+                remotepath = filepath if filepath else "data.parquet"
+
+            # encode dataframe to disk temporarily
+            suffix = Path(remotepath).suffix
+            with tempfile.NamedTemporaryFile(mode="w+", prefix="df_", suffix=suffix) as f:
+                if suffix in PARQUET_SUFFIXES:
+                    df.to_parquet(f.name)
+                elif suffix in CSV_SUFFIXES:
+                    df.to_csv(f.name)
+                else:
+                    msg = f"{remotepath} is not in a supported format."
+                    raise AnaliticoException(msg, status_code=400)
+                return self.upload(filepath=f.name, remotepath=remotepath)
+
+        # uploading a single file?
+        if os.path.isfile(filepath):
+            if not remotepath:
+                remotepath = Path(filepath).name
+
+            # no absolute paths
+            assert not remotepath.startswith("/"), "remotepath should be relative, eg: flower.jpg or flowers/flower.jpg"
+
+            if direct:
+                try:
+                    # see if we can upload directly to storage
+                    if self._upload_directly_to_storage(filepath, remotepath):
+                        return True
+                except AnaliticoException as exc:
+                    logger.error(f"upload - direct to storage failed, will try via /files APIs, exc: {exc}")
+
+            url = self.url + "/files/" + remotepath
+            url, headers = self.sdk.get_url_headers(url)
+
+            with open(filepath, "rb") as f:
+                # multipart encoded upload
+                response = requests.put(url, files={"file": f}, headers=headers)
+
+                # raw upload
+                # response = requests.put(url, data=f, headers=headers)
+
+                if response.status_code not in (200, 204):
+                    msg = f"Could not upload {filepath} to {url}, status: {response.status_code}"
+                    raise AnaliticoException(msg, status_code=response.status)
+                return True
+
+        raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
 
     def download(
         self, remotepath: str, filepath: str = None, stream: bool = False, binary: bool = True, df: str = None
