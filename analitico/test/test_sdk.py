@@ -47,7 +47,7 @@ class SDKTests(unittest.TestCase, TestMixin):
         try:
             # random directory to test subdirectory generation
             remotepath = f"tst_dir_{id_generator(12)}/abc/def/ghi/unicorns.data"
-            logger.info(f"\nupload {remotepath}")
+            logger.info(f"\nsdk upload {remotepath}")
 
             # random bytes to avoid compression, etc
             data1 = bytearray(os.urandom(size))
@@ -60,7 +60,7 @@ class SDKTests(unittest.TestCase, TestMixin):
 
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"upload (direct): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"sdk upload (direct): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
             # download (streaming)
@@ -72,7 +72,7 @@ class SDKTests(unittest.TestCase, TestMixin):
 
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"download (streaming): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"sdk download (streaming): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
                 f2.seek(0)
@@ -83,11 +83,11 @@ class SDKTests(unittest.TestCase, TestMixin):
             with tempfile.NamedTemporaryFile() as f1:
                 f1.write(data1)
                 started_ms = time_ms()
-                item.upload(filepath=f1.name, remotepath=remotepath)
+                item.upload(filepath=f1.name, remotepath=remotepath, direct=False)
 
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"sdk upload (server): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
             # download data from item's storage
@@ -96,7 +96,7 @@ class SDKTests(unittest.TestCase, TestMixin):
                 item.download(remotepath, f3.name)
                 elapsed_ms = max(1, time_ms(started_ms))
                 kb_sec = (size / 1024.0) / (elapsed_ms / 1000.0)
-                msg = f"download (file): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
+                msg = f"sdk download (file): {size / MB_SIZE} MB in {elapsed_ms} ms, {kb_sec:.0f} KB/s"
                 logger.info(msg)
 
                 data3 = f3.file.read()
