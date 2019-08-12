@@ -15,24 +15,13 @@ To install on Jupyter, Colaboratory, etc:
 
 ```python
 import analitico
-import pandas as pd
 
 # authorize calls with developer token
 sdk = analitico.authorize_sdk(token="tok_xxx")
 
-# download a dataset from analitico
+# retrieve a dataset object from analitico
 dataset = sdk.get_dataset("ds_xxx")
 
-# convert dataset to a typed pandas dataframe
-df = dataset.get_dataframe()
+# download a data file from storage into a Pandas dataframe
+df = dataset.download(df="customers.csv")
 ```
-
-### Testing
-
-To run tests:  
-`python -m pytest`
-
-### Documenting code
-
-Please use docstrings, see:  
-https://www.datacamp.com/community/tutorials/docstrings-python

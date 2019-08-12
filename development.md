@@ -1,3 +1,13 @@
+## Testing
+
+To run tests:  
+`python -m pytest`
+
+## Documenting code
+
+Please use docstrings, see:  
+https://www.datacamp.com/community/tutorials/docstrings-python
+
 ## Packaging analitico
 
 Python packaging user guide:  

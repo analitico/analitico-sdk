@@ -256,6 +256,15 @@ class AnaliticoSDK(AttributeMixin):
         return analitico.models.models_factory(self, json["data"])
 
     def get_workspace(self, workspace_id: str = None) -> Workspace:
+        """
+        Returns the workspace with the given id (or the default workspace).
+
+        Keyword Arguments:
+            workspace_id {str} -- The id of the workspace to be retrieve, eg. ws_xxx (default: {None})
+
+        Returns:
+            Workspace -- A Workspace object that can be used to retrieve files or other items.
+        """
         if not workspace_id:
             if not self.workspace:
                 workspaces = self.get_items(analitico.WORKSPACE_TYPE)
