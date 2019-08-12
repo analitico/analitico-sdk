@@ -216,10 +216,10 @@ class IAlgorithmPlugin(IPlugin):
         test = args[1] if len(args) > 1 else None
         results = self.train(train, test, results, *args, **kwargs)
 
-        # finalize results and save as training.json
+        # finalize results and save as metadata.json
         results["performance"]["total_ms"] = time_ms(started_on)
         artifacts_path = self.factory.get_artifacts_directory()
-        results_path = os.path.join(artifacts_path, "training.json")
+        results_path = os.path.join(artifacts_path, "metadata.json")
         save_json(results, results_path)
         self.info("saved %s (%d bytes)", results_path, os.path.getsize(results_path))
         return results
@@ -234,7 +234,7 @@ class IAlgorithmPlugin(IPlugin):
         data = args[0]
 
         artifacts_path = self.factory.get_artifacts_directory()
-        training = read_json(os.path.join(artifacts_path, "training.json"))
+        training = read_json(os.path.join(artifacts_path, "metadata.json"))
         assert training
 
         started_on = time_ms()

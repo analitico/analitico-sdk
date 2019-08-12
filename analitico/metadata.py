@@ -9,7 +9,7 @@ import sklearn.metrics
 from analitico import logger
 from analitico.utilities import read_json, save_json, get_dict_dot, set_dict_dot
 
-# model metadata is saved in training.json
+# model metadata is saved in metadata.json
 METADATA_FILENAME = "metadata.json"
 
 

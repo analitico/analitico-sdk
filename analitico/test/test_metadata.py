@@ -15,7 +15,7 @@ from analitico.metadata import *
 
 
 class MetadataTests(unittest.TestCase):
-    """ Test utilities to write metrics and scores to training.json """
+    """ Test utilities to write metrics and scores to metadata.json """
 
     def setUp(self):
         if os.path.exists(METADATA_FILENAME):

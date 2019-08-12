@@ -34,12 +34,12 @@ class RecipePipelinePlugin(PipelinePlugin):
     def run(self, *args, action=None, **kwargs):
         """ Process the plugins in sequence to create trained model artifacts """
         artifacts_path = self.factory.get_artifacts_directory()
-        training_path = os.path.join(artifacts_path, "training.json")
+        training_path = os.path.join(artifacts_path, "metadata.json")
 
         # when training run the recipe which will produce the training artifacts
         if analitico.constants.ACTION_TRAIN in action:
             results = super().run(*args, action=action, **kwargs)
-            # training.json, trained models and other artifacts should
+            # metadata.json, trained models and other artifacts should
             # now be in the artifacts directory. depending on the environment
             # these may be left on disk (SDK) or stored in cloud (APIs)
             if not isinstance(results, dict):
@@ -50,7 +50,7 @@ class RecipePipelinePlugin(PipelinePlugin):
                 )
             if not os.path.isfile(training_path):
                 self.factory.exception(
-                    "Pipeline didn't produce training.json", item=self, artifacts_path=artifacts_path
+                    "Pipeline didn't produce metadata.json", item=self, artifacts_path=artifacts_path
                 )
             return results
 
@@ -59,7 +59,7 @@ class RecipePipelinePlugin(PipelinePlugin):
             # check for training information on disk
             if not os.path.isfile(training_path):
                 self.factory.exception(
-                    "Pipeline can't fine file training.json", item=self, artifacts_path=artifacts_path
+                    "Pipeline can't fine file metadata.json", item=self, artifacts_path=artifacts_path
                 )
 
             # normally prediction input is a pd.DataFrame

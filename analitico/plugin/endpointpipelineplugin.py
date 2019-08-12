@@ -34,7 +34,7 @@ class EndpointPipelinePlugin(PipelinePlugin):
             if not self.plugins:
                 # read training information from disk
                 artifacts_path = self.factory.get_artifacts_directory()
-                training_path = os.path.join(artifacts_path, "training.json")
+                training_path = os.path.join(artifacts_path, "metadata.json")
                 training = read_json(training_path)
                 assert training
                 self.set_attribute("plugins", [{"name": get_dict_dot(training, "plugins.prediction")}])
