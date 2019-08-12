@@ -114,6 +114,7 @@ class SDKTests(unittest.TestCase, TestMixin):
 
     def test_sdk_get_item(self):
         item = self.sdk.get_item("rx_ho374b88")
+        
         self.assertIsNotNone(item)
         self.assertIsInstance(item, analitico.Recipe)
         self.assertTrue(item.id.startswith(analitico.RECIPE_PREFIX))
@@ -121,10 +122,14 @@ class SDKTests(unittest.TestCase, TestMixin):
 
     def test_sdk_get_recipe(self):
         recipe = self.sdk.get_recipe("rx_ho374b88")
+
         self.assertIsNotNone(recipe)
         self.assertIsInstance(recipe, analitico.Recipe)
         self.assertTrue(recipe.id.startswith(analitico.RECIPE_PREFIX))
         self.assertEqual(recipe.type, "recipe")
+
+        recipe_str = str(recipe)
+        self.assertEqual(recipe_str, "recipe: rx_ho374b88")
 
     ##
     ## create

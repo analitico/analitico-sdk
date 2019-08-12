@@ -176,7 +176,7 @@ class Item(AttributeMixin):
 
                 if response.status_code not in (200, 204):
                     msg = f"Could not upload {filepath} to {url}, status: {response.status_code}"
-                    raise AnaliticoException(msg, status_code=response.status)
+                    raise AnaliticoException(msg, status_code=response.status_code)
                 return True
 
         raise NotImplementedError("Uploading multiple files at once is not yet implemented.")
@@ -243,3 +243,6 @@ class Item(AttributeMixin):
     def to_dict(self) -> dict:
         """ Return item as a dictionary. """
         return {"id": self.id, "type": "analitico/" + self.type, "attributes": self.attributes}
+
+    def __str__(self):
+        return self.type + ": " + self.id

@@ -36,7 +36,7 @@ class AnaliticoSDK(AttributeMixin):
             assert token.startswith("tok_")
             self.set_attribute("token", token)
         if endpoint:
-            assert endpoint.startswith("https://")
+            assert endpoint.startswith("https://") or endpoint.startswith("http://")
             assert endpoint.endswith("/")
             self.set_attribute("endpoint", endpoint)
 
@@ -122,9 +122,8 @@ class AnaliticoSDK(AttributeMixin):
         # see if assets uses analitico://workspaces/... scheme
         if url.startswith("analitico://"):
             if not self.endpoint:
-                raise AnaliticoException(
-                    f"Analitico SDK is not configured with a valid API endpoint and cannot get {url}"
-                )
+                msg = f"Analitico SDK is not configured with a valid API endpoint and cannot get {url}"
+                raise AnaliticoException(msg)
             url = self.endpoint + url[len("analitico://") :]
 
         try:
@@ -133,7 +132,9 @@ class AnaliticoSDK(AttributeMixin):
             pass
         headers = {}
         if url_parse and url_parse.scheme in ("http", "https"):
-            if url_parse.hostname and url_parse.hostname.endswith("analitico.ai") and self.token:
+            hostname = url_parse.hostname
+            is_analitico = hostname and ("analitico.ai" in hostname or "127.0.0.1" in hostname)
+            if is_analitico and self.token:
                 # if url is connecting to analitico.ai add token
                 headers = {"Authorization": "Bearer " + self.token}
         return url, headers
