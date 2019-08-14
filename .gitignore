@@ -4,3 +4,5 @@ analitico.egg-info
 .eggs
 .DS_Store
 /dist/*
+.ssh/authorized_keys
+*.DS_Store
