@@ -6,3 +6,4 @@ analitico.egg-info
 /dist/*
 .ssh/authorized_keys
 *.DS_Store
+.ipynb_checkpoints
