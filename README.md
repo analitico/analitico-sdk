@@ -23,5 +23,5 @@ sdk = analitico.authorize_sdk(token="tok_xxx")
 dataset = sdk.get_dataset("ds_xxx")
 
 # download a data file from storage into a Pandas dataframe
-df = dataset.download(df="customers.csv")
+df = dataset.download(remotepath="customers.csv")
 ```
