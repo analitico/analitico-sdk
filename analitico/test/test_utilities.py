@@ -3,7 +3,7 @@ import tempfile
 import numpy as np
 import os
 
-from analitico.utilities import get_dict_dot, save_json, read_json, read_text, save_text, copy_directory
+from analitico.utilities import get_dict_dot, save_json, read_json, read_text, save_text, copy_directory, size_to_bytes
 
 TST_DICT = {
     "parent_1": {
@@ -100,3 +100,25 @@ class UtilitiesTests(unittest.TestCase):
             destination_missing = os.path.join(temp, "subfolder")
             copy_directory(source.name, destination_missing)
             self.assertTrue(os.path.exists(destination_missing))
+
+    def test_size_to_bytes(self):
+        result = size_to_bytes("1234")
+        self.assertEqual(result, 1234)
+
+        result = size_to_bytes(1234)
+        self.assertEqual(result, 1234)
+
+        result = size_to_bytes("12M")
+        self.assertEqual(result, 12000000)
+
+        result = size_to_bytes("12MB")
+        self.assertEqual(result, 12000000)
+
+        result = size_to_bytes("32Gi")
+        self.assertEqual(result, 34359738368)
+
+        result = size_to_bytes("32GiB")
+        self.assertEqual(result, 34359738368)
+        
+
+        

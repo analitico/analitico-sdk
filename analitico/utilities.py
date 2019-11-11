@@ -21,6 +21,8 @@ import simplejson as json
 
 from datetime import datetime
 
+from binary import BinaryUnits, DecimalUnits, convert_units
+
 try:
     import psutil
     import distro
@@ -498,3 +500,39 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
     stdout = json_from_string_if_possible(response.stdout)
     stderr = json_from_string_if_possible(response.stderr)
     return stdout, stderr
+
+
+##
+## Unit conversion
+##
+
+
+def size_to_bytes(n) -> int:
+    """ Convert size like 1024M, 1024MB, 1024Gi, 1024GiB, or 1024 (bytes) to binary bytes """
+    # autodetect suffix (eg, 1024M or 1024Gi)
+    matches = re.findall("(\d+)([a-zA-Z](i)?)?", str(n))
+    n, unit, si = matches[0]
+    units = {
+        "E": DecimalUnits.EB,
+        "P": DecimalUnits.PB,
+        "T": DecimalUnits.TB,
+        "G": DecimalUnits.GB,
+        "M": DecimalUnits.MB,
+        "K": DecimalUnits.KB,
+        "Ei": BinaryUnits.EB,
+        "Pi": BinaryUnits.PB,
+        "Ti": BinaryUnits.TB,
+        "Gi": BinaryUnits.GB,
+        "Mi": BinaryUnits.MB,
+        "Ki": BinaryUnits.KB,
+    }
+    
+    n = int(n)
+    # value considered in bytes
+    if not unit:
+        return n
+    
+    unit = units[unit]
+    value_bytes, _ = convert_units(n, unit=unit, to=BinaryUnits.B)
+
+    return int(value_bytes)
