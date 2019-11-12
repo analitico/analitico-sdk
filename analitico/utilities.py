@@ -536,3 +536,20 @@ def size_to_bytes(n) -> int:
     value_bytes, _ = convert_units(n, unit=unit, to=BinaryUnits.B)
 
     return int(value_bytes)
+
+def cpu_unit_to_fractional(n) -> float:
+    """ 
+    Converts CPU unit from milli (m, eg: 100m) to the fractional representation (eg, 0.1).
+    The unit represents the amount of CPU a process can use.
+    For example 100m CPU, 100 milliCPU, and 0.1 CPU are all the same.
+    Absolute value without unit are considered already converted.
+    """
+    # eg, 1, 100m, 0.1 or .1
+    matches = re.findall("([0-9]*\.?[0-9]+)(m)?", str(n))
+    n, milli = matches[0]
+    
+    n = float(n)
+    if not milli:
+        return n
+    
+    return n / 1000

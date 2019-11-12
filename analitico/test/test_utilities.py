@@ -3,7 +3,7 @@ import tempfile
 import numpy as np
 import os
 
-from analitico.utilities import get_dict_dot, save_json, read_json, read_text, save_text, copy_directory, size_to_bytes
+from analitico.utilities import *
 
 TST_DICT = {
     "parent_1": {
@@ -119,6 +119,23 @@ class UtilitiesTests(unittest.TestCase):
 
         result = size_to_bytes("32GiB")
         self.assertEqual(result, 34359738368)
+
+    def test_cpu_unit_to_fractional(self):
+        result = cpu_unit_to_fractional(1)
+        self.assertEqual(1.0, result)
+
+        result = cpu_unit_to_fractional("100m")
+        self.assertEqual(0.1, result)
+
+        result = cpu_unit_to_fractional("1000m")
+        self.assertEqual(1.0, result)
+
+        result = cpu_unit_to_fractional(0.1)
+        self.assertEqual(0.1, result)
+
+        result = cpu_unit_to_fractional(.1)
+        self.assertEqual(0.1, result)
+        
         
 
         
