@@ -376,8 +376,8 @@ def get_dict_dot(d: dict, key: str, default=None):
     try:
         if isinstance(d, dict) and key:
             split = key.split(".")
-            value = d.get(split[0])
-            if value:
+            value = d.get(split[0], None)
+            if value is not None:
                 if len(split) == 1:
                     return value
                 return get_dict_dot(value, key[len(split[0]) + 1 :], default)
