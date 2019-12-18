@@ -149,7 +149,7 @@ class DatasetTests(unittest.TestCase, TestMixin):
             # 2019-09-15T15:53:00+05:00 (changes timezone)
             self.assertEqual(df.iloc[5, 2], pd.Timestamp("2019-09-15 10:53:00"))
             # 2019-09-15T15:53:00 (maintains +5 timezone)
-            self.assertEqual(df.iloc[6, 2], pd.Timestamp("2019-09-15 10:53:00"))
+            self.assertEqual(df.iloc[6, 2], pd.Timestamp("2019-09-15 15:53:00"))
             # 2019-09-15T15:53:00+00 (reverts timezone)
             self.assertEqual(df.iloc[7, 2], pd.Timestamp("2019-09-15 15:53:00"))
             # 2019-09-15T15:53:00-01:30 (changes timezone)
