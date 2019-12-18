@@ -146,7 +146,7 @@ def apply_column(df: pd.DataFrame, column):
                         # strings like no
                         for not_a_date in NA_DATES:
                             df[column_name].replace(not_a_date, np.nan, inplace=True)
-                    df[column_name] = df[column_name].astype("datetime64[ns]")
+                    df[column_name] = pd.to_datetime(df[column_name], utc=True).astype("datetime64[ns]")
                 elif column_type == "timespan":
                     if missing:
                         df[column_name] = None
