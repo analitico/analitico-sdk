@@ -268,6 +268,8 @@ class Factory(AttributeMixin):
             return analitico.WORKER_TYPE
         if item_id.startswith(analitico.WORKSPACE_PREFIX):
             return analitico.WORKSPACE_TYPE
+        if item_id.startswith(analitico.AUTOML_PREFIX):
+            return analitico.AUTOML_TYPE
         if re.match(self.EMAIL_RE, item_id):
             return analitico.USER_TYPE
         self.warning("Factory.get_item_type - couldn't find type for: " + item_id)
