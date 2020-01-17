@@ -482,10 +482,9 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
 
     elapsed_ms = time_ms(started_on)
     message = (
-        f"completed in {elapsed_ms} ms, returned code: {response.returncode}"
+        f"completed in {elapsed_ms} ms, returned code: {response.returncode}\n\n{response.stdout}\n\n{response.stderr}"
     )
     logger.info(message)
-    logger.debug("\n\n{response.stdout}\n\n{response.stderr}")
     if job:
         job.append_logs(message)
 
