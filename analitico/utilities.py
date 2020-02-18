@@ -398,6 +398,16 @@ def set_dict_dot(d: dict, key: str, value=None):
             d[subkey] = OrderedDict()
         set_dict_dot(d[subkey], key[len(subkey) + 1 :], value)
 
+def find_key(d: dict, key: str, default: None):
+    """ Search for the first occurence of the given key deeply in the dict. 
+    When not found is returned the default value """
+    if key in d: return d[key]
+    for k, v in d.items():
+        if isinstance(v, dict):
+            item = find_key(v, key, default)
+            if item is not None:
+                return item
+    return default
 
 ##
 ## CSV
