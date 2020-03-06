@@ -15,6 +15,7 @@ ACTION_DEPLOY = "deploy"  # deploy a model to a serverless endpoint
 ACTION_RUN = "run"  # run a recipe, notebook or dataset notebooks
 ACTION_BUILD = "build"  # build a snapshot of a recipe into a docker
 ACTION_RUN_AND_BUILD = "run-and-build"  # run the recipe then build its docker/model as one job with two steps
+ACTION_DATASET_METADATA = "dataset-metadata" # analyze a dataset to generate statistics, schema etc...
 
 # types/models
 TYPE_PREFIX = "analitico/"
