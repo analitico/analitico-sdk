@@ -10,7 +10,7 @@ import sys
 import random
 import re
 import traceback
-
+from datetime import datetime
 from collections import OrderedDict
 
 # use simplejson instead of standard built in library
@@ -18,8 +18,6 @@ from collections import OrderedDict
 # thus producing json which is ecma compliant and won't have issues being read
 # https://simplejson.readthedocs.io/en/latest/
 import simplejson as json
-
-from datetime import datetime
 
 from binary import BinaryUnits, DecimalUnits, convert_units
 
@@ -342,11 +340,11 @@ def timeit(method):
     return timed
 
 
-def datetime_to_iso8601(datetime: datetime = None) -> str:
+def datetime_to_iso8601(dt: datetime = None) -> str:
     """ Convert a datetime to ISO8601 format, eg: 2020-04-04T10:12:00Z """
-    if not datetime:
-        datetime = datetime.utcnow()
-    return datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if not dt:
+        dt = datetime.utcnow()
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 ##
