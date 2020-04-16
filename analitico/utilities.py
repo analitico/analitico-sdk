@@ -310,7 +310,7 @@ def save_text(text, filename):
 
 
 ##
-## Time utilities
+## Date and Time utilities
 ##
 
 
@@ -340,6 +340,13 @@ def timeit(method):
         return result
 
     return timed
+
+
+def datetime_to_iso8601(datetime: datetime = None) -> str:
+    """ Convert a datetime to ISO8601 format, eg: 2020-04-04T10:12:00Z """
+    if not datetime:
+        datetime = datetime.utcnow()
+    return datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 ##
@@ -398,16 +405,19 @@ def set_dict_dot(d: dict, key: str, value=None):
             d[subkey] = OrderedDict()
         set_dict_dot(d[subkey], key[len(subkey) + 1 :], value)
 
+
 def find_key(d: dict, key: str, default: None):
     """ Search for the first occurence of the given key deeply in the dict. 
     When not found is returned the default value """
-    if key in d: return d[key]
+    if key in d:
+        return d[key]
     for k, v in d.items():
         if isinstance(v, dict):
             item = find_key(v, key, default)
             if item is not None:
                 return item
     return default
+
 
 ##
 ## CSV
@@ -491,9 +501,7 @@ def subprocess_run(cmd_args, job=None, timeout=3600, cwd=None, shell=False) -> (
     )
 
     elapsed_ms = time_ms(started_on)
-    message = (
-        f"completed in {elapsed_ms} ms, returned code: {response.returncode}"
-    )
+    message = f"completed in {elapsed_ms} ms, returned code: {response.returncode}"
     logger.info(message)
     logger.debug("\n\n{response.stdout}\n\n{response.stderr}")
     if job:
@@ -537,16 +545,17 @@ def size_to_bytes(n) -> int:
         "Mi": BinaryUnits.MB,
         "Ki": BinaryUnits.KB,
     }
-    
+
     n = int(n)
     # value considered in bytes
     if not unit:
         return n
-    
+
     unit = units[unit]
     value_bytes, _ = convert_units(n, unit=unit, to=BinaryUnits.B)
 
     return int(value_bytes)
+
 
 def cpu_unit_to_fractional(n) -> float:
     """ 
@@ -558,9 +567,9 @@ def cpu_unit_to_fractional(n) -> float:
     # eg, 1, 100m, 0.1 or .1
     matches = re.findall("([0-9]*\.?[0-9]+)(m)?", str(n))
     n, milli = matches[0]
-    
+
     n = float(n)
     if not milli:
         return n
-    
+
     return n / 1000
