@@ -79,7 +79,7 @@ class FluentdFormatter(logging.Formatter):
         Converts record dict to a JSON string. 
         Override this method to change the way dict is converted to JSON. 
         """
-        return self.json_lib.dumps(record)
+        return self.json_lib.dumps(record, default=lambda obj : f"Object of type {type(obj)} is not JSON serializable")
 
     def extra_from_record(self, record):
         """
